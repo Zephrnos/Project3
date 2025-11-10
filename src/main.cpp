@@ -144,12 +144,16 @@ int main(int argc, char* argv[]) {
         cout << "No ZIP codes provided. Use flags like: -Z56301 -Z90210\n";
     }
 
+
+    
+    //PROJECT 2 ZIP code interactive lookup
+    /*
     // Interactive ZIP code lookup
     cout << "\n=== Interactive ZIP Code Lookup ===\n";
     cout << "Enter ZIP codes to search (numbers only) or enter 'q' to quit \n";
     
     string zipInput;
-    /*
+
     while (true) {
         cout << "\nEnter ZIP code: ";
         cin >> zipInput;

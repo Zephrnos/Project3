@@ -2,13 +2,14 @@
 #include <iomanip>
 #include <string>
 #include <iostream>
-#include <limits> // For numeric_limits
+#include <limits>
 #include <sstream>
 #include <fstream>
 #include "ZipCodeRecordBuffer.h"
 #include "HeaderBuffer.h"
 #include "convertCSV.h"
 #include "IndexManager.h"
+#include "BlockBuffer.h"
 
 using namespace std;
 
@@ -148,6 +149,7 @@ int main(int argc, char* argv[]) {
     cout << "Enter ZIP codes to search (numbers only) or enter 'q' to quit \n";
     
     string zipInput;
+    /*
     while (true) {
         cout << "\nEnter ZIP code: ";
         cin >> zipInput;
@@ -194,6 +196,39 @@ int main(int argc, char* argv[]) {
 
         binFile.close();
     }
+    */
+
+    //PROJECT 3 BlockBuffer Test
+    
+
+    // Create fake CSV input for three records
+    std::stringstream csvData;
+    csvData << "56301,St. Cloud,MN,Stearns,45.5533,-94.1718\n";
+    csvData << "55414,Minneapolis,MN,Hennepin,44.9735,-93.2272\n";
+    csvData << "55044,Lakeville,MN,Dakota,44.6497,-93.2427\n";
+
+    // Read records
+    ZipCodeRecordBuffer rec1, rec2, rec3;
+    rec1.ReadRecord(csvData);
+    rec2.ReadRecord(csvData);
+    rec3.ReadRecord(csvData);
+
+    // Create and populate BlockBuffer
+    BlockBuffer block;
+    block.addRecord(rec1);
+    block.addRecord(rec2);
+    block.addRecord(rec3);
+
+    // Write the block to file
+    block.writeToFile("data/block_test.bin");
+
+    // Read it back
+    BlockBuffer loaded;
+    loaded.readFromFile("data/block_test.bin");
+
+    // Print results
+    loaded.debugPrint(std::cout);
+    
 
     cout << "\nProgram complete.\n";
     return 0;

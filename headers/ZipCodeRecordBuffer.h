@@ -104,13 +104,31 @@ public:
         // EOF reached without a valid data record
         return false;
     }
-
+    
     std::string getZipCode() const { return m_fields[0]; }
     std::string getPlaceName() const { return m_fields[1]; }
     std::string getState() const { return m_fields[2]; }
     std::string getCounty() const { return m_fields[3]; }
     double getLatitude() const { return latitude; }
     double getLongitude() const { return longitude; }
+
+    // Serialize this record to a single comma-separated line (for BlockBuffer)
+    void WriteRecord(std::ostream &out) const {
+        out << m_fields[0] << ','    // Zip
+            << m_fields[1] << ','    // Place name
+            << m_fields[2] << ','    // State
+            << m_fields[3] << ','    // County
+            << latitude << ','       // Latitude
+            << longitude;            // Longitude
+    }
+
+    // Approximate size in bytes (for BlockBuffer space checking)
+    size_t getRecordSize() const {
+        std::ostringstream oss;
+        WriteRecord(oss);
+        return oss.str().size();
+    }
+
 
 private:
     std::string m_fields[6];

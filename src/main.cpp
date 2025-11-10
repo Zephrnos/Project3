@@ -5,11 +5,14 @@
 #include <limits>
 #include <sstream>
 #include <fstream>
+#include <vector>
 #include "ZipCodeRecordBuffer.h"
 #include "HeaderBuffer.h"
 #include "convertCSV.h"
 #include "IndexManager.h"
 #include "BlockBuffer.h"
+#include "BlockHeaderBuffer.h"
+#include "BlockSequenceSetGenerator.h"
 
 using namespace std;
 
@@ -67,7 +70,7 @@ int main(int argc, char* argv[]) {
         if (latitude < record.southernmost_lat) { record.southernmost_lat = latitude; record.southernmost_zip = zip; }
     }
     file.close();
-// Extreme headers for zipcode project 1
+
     // Print state extremes summary
     cout << left << setw(8) << "State"
          << setw(15) << "Easternmost"
@@ -96,10 +99,8 @@ int main(int argc, char* argv[]) {
     bool foundAny = false;
     for (int i = 1; i < argc; ++i) {
         string arg = argv[i];
-
-        // Look for flags that start with "-Z"
         if (arg.rfind("-Z", 0) == 0 && arg.size() > 2) {
-            string zipInput = arg.substr(2); // Get the ZIP after "-Z"
+            string zipInput = arg.substr(2);
             foundAny = true;
 
             uint64_t offset = index.findOffset(zipInput);
@@ -144,96 +145,44 @@ int main(int argc, char* argv[]) {
         cout << "No ZIP codes provided. Use flags like: -Z56301 -Z90210\n";
     }
 
+    // --- Part 3: Project 3 Blocked Sequence Set Generation ---
+    cout << "\n--- Project 3: Blocked Sequence Set Generation ---\n";
 
-    
-    //PROJECT 2 ZIP code interactive lookup
-    /*
-    // Interactive ZIP code lookup
-    cout << "\n=== Interactive ZIP Code Lookup ===\n";
-    cout << "Enter ZIP codes to search (numbers only) or enter 'q' to quit \n";
-    
-    string zipInput;
-
-    while (true) {
-        cout << "\nEnter ZIP code: ";
-        cin >> zipInput;
-        
-        if (zipInput == "q" || zipInput == "Q") break;
-        
-        cout << "\nSearching for ZIP code " << zipInput << "... (please wait)\n";
-        uint64_t offset = index.findOffset(zipInput);
-        if (offset == UINT64_MAX) {
-            cout << "ZIP code " << zipInput << " not found.\n";
-            cout << "\n========================================\n";
-            continue;
-        }
-
-        ifstream binFile("data/newBinaryPCodes.dat", ios::binary);
-        if (!binFile.is_open()) {
-            cerr << "Error opening binary data file.\n";
-            break;
-        }
-
-        binFile.seekg(offset, ios::beg);
-
-        uint32_t recordLength;
-        binFile.read(reinterpret_cast<char*>(&recordLength), sizeof(recordLength));
-
-        string record(recordLength, '\0');
-        binFile.read(&record[0], recordLength);
-
-        ZipCodeRecordBuffer zipBuffer;
-        istringstream ss(record);
-        if (zipBuffer.ReadRecord(ss)) {
-            cout << "\nFound ZIP code! Details:\n";
-            cout << "---------------------------------------------\n";
-            cout << "ZIP Code: " << zipBuffer.getZipCode() << "\n"
-                 << "Place Name: " << zipBuffer.getPlaceName() << "\n"
-                 << "State: " << zipBuffer.getState() << "\n"
-                 << "County: " << zipBuffer.getCounty() << "\n"
-                 << "Latitude: " << zipBuffer.getLatitude() << "\n"
-                 << "Longitude: " << zipBuffer.getLongitude() << "\n"
-                 << "---------------------------------------------\n";
-        } else {
-            cerr << "Error parsing record for ZIP code " << zipInput << endl;
-        }
-
-        binFile.close();
+    ifstream csvFile("data/converted_postal_codes.csv");
+    if (!csvFile.is_open()) {
+        cerr << "Error opening CSV file for blocked sequence set.\n";
+        return 1;
     }
-    */
 
-    //PROJECT 3 BlockBuffer Test
-    
+    // Skip header
+    getline(csvFile, header);
 
-    // Create fake CSV input for three records
-    std::stringstream csvData;
-    csvData << "56301,St. Cloud,MN,Stearns,45.5533,-94.1718\n";
-    csvData << "55414,Minneapolis,MN,Hennepin,44.9735,-93.2272\n";
-    csvData << "55044,Lakeville,MN,Dakota,44.6497,-93.2427\n";
+    // Read all records
+    vector<ZipCodeRecordBuffer> records;
+    while (true) {
+        ZipCodeRecordBuffer rec;
+        if (!rec.ReadRecord(csvFile)) break;
+        records.push_back(rec);
+    }
+    csvFile.close();
+    cout << "Read " << records.size() << " records from CSV.\n";
 
-    // Read records
-    ZipCodeRecordBuffer rec1, rec2, rec3;
-    rec1.ReadRecord(csvData);
-    rec2.ReadRecord(csvData);
-    rec3.ReadRecord(csvData);
+    // Generate blocked sequence set
+    BlockSequenceSetGenerator bssGen(512); // 512-byte blocks
+    for (auto& rec : records) {
+        bssGen.addRecord(rec);
+    }
+    cout << "Generated " << bssGen.getBlockCount() << " blocks.\n";
 
-    // Create and populate BlockBuffer
-    BlockBuffer block;
-    block.addRecord(rec1);
-    block.addRecord(rec2);
-    block.addRecord(rec3);
-
-    // Write the block to file
-    block.writeToFile("data/block_test.bin");
-
-    // Read it back
-    BlockBuffer loaded;
-    loaded.readFromFile("data/block_test.bin");
-
-    // Print results
-    loaded.debugPrint(std::cout);
-    
+    // Write to file
+    string outputBSS = "data/block_test.bss";
+    if (!bssGen.writeBlocks(outputBSS)) {
+        cerr << "Error writing blocked sequence set to file.\n";
+        return 1;
+    }
+    cout << "Blocked sequence set written to: " << outputBSS << "\n";
 
     cout << "\nProgram complete.\n";
     return 0;
 }
+

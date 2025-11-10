@@ -11,7 +11,7 @@
 // Simple fixed-size block buffer to hold multiple ZipCodeRecordBuffer objects.
 class BlockBuffer {
 public:
-    BlockBuffer() : maxSize(4096), currentSize(0) {}  // Default 4KB block
+    BlockBuffer() : maxSize(512), currentSize(0) {}  // Default 512 block
 
     bool addRecord(const ZipCodeRecordBuffer &record) {
         std::ostringstream ss;

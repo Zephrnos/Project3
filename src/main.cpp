@@ -145,8 +145,13 @@ int main(int argc, char* argv[]) {
         cout << "No ZIP codes provided. Use flags like: -Z56301 -Z90210\n";
     }
 
-    // --- Part 3: Project 3 Blocked Sequence Set Generation ---
-    cout << "\n--- Project 3: Blocked Sequence Set Generation ---\n";
+
+    // --- PROJECT 3 STARTS HERE ---
+
+
+    // --- Step 3: Project 3 Blocked Sequence Set Generation ---
+    cout << "\n--- Project 3 ---\n";
+    cout << "\n--- Blocked Sequence Set Generation ---\n";
 
     ifstream csvFile("data/converted_postal_codes.csv");
     if (!csvFile.is_open()) {
@@ -181,6 +186,39 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     cout << "Blocked sequence set written to: " << outputBSS << "\n";
+
+    // --- Step 4: Sequential processing of blocked sequence set ---
+    std::ifstream bssStream("data/block_test.bss", std::ios::binary);
+    if (bssStream.is_open()) {
+        // First read total number of blocks
+        uint32_t totalBlocks = 0;
+        bssStream.read(reinterpret_cast<char*>(&totalBlocks), sizeof(totalBlocks));
+        std::cout << "Header read successfully. Total blocks: " << totalBlocks << "\n";
+
+        uint32_t totalRecordsRead = 0;
+
+        // Read each block sequentially
+        for (uint32_t rbn = 0; rbn < totalBlocks; ++rbn) {
+            BlockHeaderBuffer header;
+            if (!header.read(bssStream)) break; // fail-safe
+
+            // Create block with the size specified in header
+            BlockBuffer block(header.getBlockSize());
+            if (!block.read(bssStream)) break; // fail-safe
+
+            // Unpack each record string into a ZipCodeRecordBuffer
+            for (uint32_t i = 0; i < block.getRecordCount(); ++i) {
+                std::string recStr = block.getRecord(i);
+                ZipCodeRecordBuffer rec;
+                std::istringstream ss(recStr);
+                if (rec.ReadRecord(ss)) totalRecordsRead++;
+            }
+        }
+
+        std::cout << "Step 4 complete. Total records read: " << totalRecordsRead << "\n";
+        bssStream.close();
+    }
+
 
     cout << "\nProgram complete.\n";
     return 0;

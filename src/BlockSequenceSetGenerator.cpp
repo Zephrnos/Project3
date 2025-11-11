@@ -1,57 +1,41 @@
 #include "BlockSequenceSetGenerator.h"
-#include "BlockHeaderBuffer.h"
-#include "BlockBuffer.h"
-#include "ZipCodeRecordBuffer.h"
 #include <fstream>
 #include <iostream>
 
+// Initialize the generator with the block size
 BlockSequenceSetGenerator::BlockSequenceSetGenerator(uint32_t blockSize)
-    : blockSize(blockSize), currentRBN(0) {
-    startNewBlock();
-}
+    : blockSize(blockSize) {}
 
-void BlockSequenceSetGenerator::startNewBlock() {
-    // Create new block
-    BlockBuffer buf(blockSize);
-    blocks.push_back(buf);
+// Add a record to the current block, or start a new block if needed
+void BlockSequenceSetGenerator::addRecord(const ZipCodeRecordBuffer& record) {
+    // If no blocks yet or record won't fit in current block, create a new block
+    if (blocks.empty() || !blocks.back().addRecord(record)) {
+        BlockBuffer block(blockSize);
+        block.addRecord(record);
+        blocks.push_back(block);
 
-    // Create block header
-    BlockHeaderBuffer header;
-    if (!headers.empty()) {
-        header.setPrevRBN(currentRBN);              // current block is previous for new block
-        headers.back().setNextRBN(static_cast<int32_t>(blocks.size())); // update previous block nextRBN
+        BlockHeaderBuffer header;
+        header.setRecordCount(block.getRecordCount());
+        headers.push_back(header);
+    } else {
+        // Update record count in header for the current block
+        headers.back().setRecordCount(blocks.back().getRecordCount());
     }
-    headers.push_back(header);
-
-    currentRBN = static_cast<uint32_t>(blocks.size() - 1);
 }
 
-void BlockSequenceSetGenerator::addRecord(const ZipCodeRecordBuffer &record) {
-    BlockBuffer &currentBlock = blocks.back();
-
-    if (!currentBlock.addRecord(record)) {
-        // current record does not fit, finalize this block and start a new one
-        startNewBlock();
-        blocks.back().addRecord(record);
-    }
-
-    // Update record count in header
-    headers.back().setRecordCount(static_cast<uint32_t>(blocks.back().getRecordCount()));
-}
-
+// Write all blocks and their headers to a blocked sequence set file
 bool BlockSequenceSetGenerator::writeBlocks(const std::string &filename) {
     std::ofstream out(filename, std::ios::binary);
-    if (!out.is_open()) {
-        std::cerr << "Error opening file: " << filename << std::endl;
-        return false;
-    }
+    if (!out.is_open()) return false;
 
+    uint32_t totalBlocks = static_cast<uint32_t>(blocks.size());
+    // First write the total number of blocks for Step 4 reading
+    out.write(reinterpret_cast<const char*>(&totalBlocks), sizeof(totalBlocks));
+
+    // Write each block header and then the block itself
     for (size_t i = 0; i < blocks.size(); ++i) {
-        // Write block header
-        headers[i].writeHeader(out);
-
-        // Write block data
-        blocks[i].writeToStream(out);
+        headers[i].write(out);
+        blocks[i].write(out);
     }
 
     out.close();

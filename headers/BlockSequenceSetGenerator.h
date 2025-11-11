@@ -10,9 +10,6 @@
 
 class BlockSequenceSetGenerator {
 public:
-    uint32_t getBlockCount() const {
-        return static_cast<uint32_t>(blocks.size());
-    }
     BlockSequenceSetGenerator(uint32_t blockSize = 512);
 
     // Add a record; will create new blocks if needed
@@ -21,6 +18,7 @@ public:
     // Write all blocks to the output .bin file
     bool writeBlocks(const std::string &filename);
 
+    uint32_t getBlockCount() const { return static_cast<uint32_t>(blocks.size()); }
 private:
     uint32_t blockSize;
     std::vector<BlockBuffer> blocks;

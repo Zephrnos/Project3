@@ -8,13 +8,12 @@
 #include <cstdint>
 #include "ZipCodeRecordBuffer.h"
 
-// Handles a single block of ZipCodeRecordBuffer records
+// Handles a block of multiple ZipCodeRecordBuffer records
 class BlockBuffer {
 public:
-    BlockBuffer(uint32_t max = 512) 
-        : maxSize(max), currentSize(0), prevBlock(-1), nextBlock(-1) {}
+    BlockBuffer(uint32_t max = 512) : maxSize(max), currentSize(0) {}
 
-    // Add a record if it fits in this block
+    // Try to add a record to the block; return false if it won't fit
     bool addRecord(const ZipCodeRecordBuffer& record) {
         std::ostringstream ss;
         ss << record.getZipCode() << ","
@@ -32,18 +31,13 @@ public:
         return true;
     }
 
-    // Clear block
-    void clear() {
-        data.clear();
-        currentSize = 0;
-        prevBlock = -1;
-        nextBlock = -1;
-    }
+    // Clear the block's data
+    void clear() { data.clear(); currentSize = 0; }
 
     uint32_t getRecordCount() const { return data.size(); }
 
-    // Write block to a binary stream
-    bool writeToStream(std::ofstream& out) const {
+    // Write the block to a binary file
+    bool write(std::ofstream& out) const {
         uint32_t count = data.size();
         out.write(reinterpret_cast<const char*>(&count), sizeof(count));
         for (const auto& rec : data) {
@@ -51,13 +45,11 @@ public:
             out.write(reinterpret_cast<const char*>(&len), sizeof(len));
             out.write(rec.c_str(), len);
         }
-        out.write(reinterpret_cast<const char*>(&prevBlock), sizeof(prevBlock));
-        out.write(reinterpret_cast<const char*>(&nextBlock), sizeof(nextBlock));
         return true;
     }
 
-    // Read block from a binary stream
-    bool readFromStream(std::ifstream& in) {
+    // Read a block from a binary file
+    bool read(std::ifstream& in) {
         clear();
         uint32_t count;
         if (!in.read(reinterpret_cast<char*>(&count), sizeof(count))) return false;
@@ -70,25 +62,21 @@ public:
             data.push_back(rec);
         }
 
-        if (!in.read(reinterpret_cast<char*>(&prevBlock), sizeof(prevBlock))) return false;
-        if (!in.read(reinterpret_cast<char*>(&nextBlock), sizeof(nextBlock))) return false;
-
         currentSize = 0;
         for (const auto& rec : data) currentSize += rec.size();
         return true;
     }
 
-    void setPrev(int32_t p) { prevBlock = p; }
-    void setNext(int32_t n) { nextBlock = n; }
-    int32_t getPrev() const { return prevBlock; }
-    int32_t getNext() const { return nextBlock; }
+    // Get a string representation of a record in this block
+    std::string getRecord(uint32_t index) const {
+        if (index >= data.size()) return "";
+        return data[index];
+    }
 
 private:
-    uint32_t maxSize;
-    uint32_t currentSize;
-    int32_t prevBlock;
-    int32_t nextBlock;
-    std::vector<std::string> data;
+    uint32_t maxSize;       // Maximum allowed size of this block
+    uint32_t currentSize;   // Current used size of block
+    std::vector<std::string> data; // Serialized record strings
 };
 
-#endif // BLOCKBUFFER_H
+#endif

@@ -4,40 +4,39 @@
 #include <cstdint>
 #include <fstream>
 
-// Header for a single block in the blocked sequence set
+// Block header stores metadata about each block in the blocked sequence set
 class BlockHeaderBuffer {
 public:
     BlockHeaderBuffer()
-        : recordCount(0), prevRBN(-1), nextRBN(-1) {}
+        : blockSize(512), recordCount(0), blockCount(0) {}
 
-    // Serialize the block header to a binary stream
-    void writeHeader(std::ofstream& out) const {
+    // Write the header metadata to a binary stream
+    void write(std::ofstream& out) const {
+        out.write(reinterpret_cast<const char*>(&blockSize), sizeof(blockSize));
         out.write(reinterpret_cast<const char*>(&recordCount), sizeof(recordCount));
-        out.write(reinterpret_cast<const char*>(&prevRBN), sizeof(prevRBN));
-        out.write(reinterpret_cast<const char*>(&nextRBN), sizeof(nextRBN));
+        out.write(reinterpret_cast<const char*>(&blockCount), sizeof(blockCount));
     }
 
-    // Deserialize the block header from a binary stream
-    bool readHeader(std::ifstream& in) {
+    // Read the header metadata from a binary stream
+    bool read(std::ifstream& in) {
+        if (!in.read(reinterpret_cast<char*>(&blockSize), sizeof(blockSize))) return false;
         if (!in.read(reinterpret_cast<char*>(&recordCount), sizeof(recordCount))) return false;
-        if (!in.read(reinterpret_cast<char*>(&prevRBN), sizeof(prevRBN))) return false;
-        if (!in.read(reinterpret_cast<char*>(&nextRBN), sizeof(nextRBN))) return false;
+        if (!in.read(reinterpret_cast<char*>(&blockCount), sizeof(blockCount))) return false;
         return true;
     }
 
-    // Getters and setters
-    void setRecordCount(uint32_t rc) { recordCount = rc; }
-    void setPrevRBN(int32_t rbn) { prevRBN = rbn; }
-    void setNextRBN(int32_t rbn) { nextRBN = rbn; }
+    // Accessors
+    uint32_t getBlockSize() const { return blockSize; }
+    uint32_t getBlockCount() const { return blockCount; }
 
-    uint32_t getRecordCount() const { return recordCount; }
-    int32_t getPrevRBN() const { return prevRBN; }
-    int32_t getNextRBN() const { return nextRBN; }
+    // Setters for record/block counts
+    void setRecordCount(uint32_t rc) { recordCount = rc; }
+    void setBlockCount(uint32_t bc) { blockCount = bc; }
 
 private:
-    uint32_t recordCount;  // number of records currently in this block
-    int32_t prevRBN;       // RBN of previous block in logical order
-    int32_t nextRBN;       // RBN of next block in logical order
+    uint32_t blockSize;    // Maximum size of block in bytes
+    uint32_t recordCount;  // Number of records in this block
+    uint32_t blockCount;   // Total number of blocks in the sequence set
 };
 
-#endif // BLOCKHEADERBUFFER_H
+#endif

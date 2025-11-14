@@ -30,12 +30,12 @@ struct StateRecord {
 
 int main(int argc, char* argv[]) {
     // --- Step 1: Ensure binary and index exist ---
-    const string binaryFile = "data/newBinaryPCodes.dat";
-    const string indexFile = "data/zip.idx";
+    const string binaryFile = "../data/newBinaryPCodes.dat";
+    const string indexFile = "../data/zip.idx";
 
     ifstream testBin(binaryFile, ios::binary);
     if (!testBin.good()) {
-        cout << "Binary or index missing — rebuilding from CSV...\n";
+        cout << "Binary or index missing - rebuilding from CSV...\n";
         binaryToCSV(); // creates zip_len.dat and zip.idx
     }
     testBin.close();
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
     // --- Part 1: Compute state extremes (from converted CSV) ---
     map<string, StateRecord> all_states;
     ZipCodeRecordBuffer buffer;
-    ifstream file("data/converted_postal_codes.csv");
+    ifstream file("../data/converted_postal_codes.csv");
 
     if (!file.is_open()) {
         cerr << "Error opening data/converted_postal_codes.csv" << endl;
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 
     // --- Part 2: Load index and handle ZIP code flags ---
     IndexManager index;
-    index.readIndex("data/zip.idx");
+    index.readIndex("../data/zip.idx");
 
     cout << "\n--- ZIP Code Search Results ---\n";
 
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
                 continue;
             }
 
-            ifstream binFile("data/newBinaryPCodes.dat", ios::binary);
+            ifstream binFile("../data/newBinaryPCodes.dat", ios::binary);
             if (!binFile.is_open()) {
                 cerr << "Error opening binary data file.\n";
                 return 1;
@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
     cout << "\n--- Project 3 ---\n";
     cout << "\n--- Blocked Sequence Set Generation ---\n";
 
-    ifstream csvFile("data/converted_postal_codes.csv");
+    ifstream csvFile("../data/converted_postal_codes.csv");
     if (!csvFile.is_open()) {
         cerr << "Error opening CSV file for blocked sequence set.\n";
         return 1;
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
     cout << "Generated " << bssGen.getBlockCount() << " blocks.\n";
 
     // Write to file
-    string outputBSS = "data/block_test.bss";
+    string outputBSS = "../data/block_test.bss";
     if (!bssGen.writeBlocks(outputBSS)) {
         cerr << "Error writing blocked sequence set to file.\n";
         return 1;
@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
     cout << "Blocked sequence set written to: " << outputBSS << "\n";
 
     // --- Step 4: Sequential processing of blocked sequence set ---
-    std::ifstream bssStream("data/block_test.bss", std::ios::binary);
+    std::ifstream bssStream("../data/block_test.bss", std::ios::binary);
     if (bssStream.is_open()) {
         // First read total number of blocks
         uint32_t totalBlocks = 0;
@@ -199,11 +199,11 @@ int main(int argc, char* argv[]) {
 
         // Read each block sequentially
         for (uint32_t rbn = 0; rbn < totalBlocks; ++rbn) {
-            BlockHeaderBuffer header;
-            if (!header.read(bssStream)) break; // fail-safe
+            BlockHeaderBuffer block_header;
+            if (!block_header.read(bssStream)) break; // fail-safe
 
             // Create block with the size specified in header
-            BlockBuffer block(header.getBlockSize());
+            BlockBuffer block(block_header.getBlockSize());
             if (!block.read(bssStream)) break; // fail-safe
 
             // Unpack each record string into a ZipCodeRecordBuffer

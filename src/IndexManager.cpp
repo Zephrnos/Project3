@@ -17,7 +17,7 @@
 void IndexManager::buildIndex(const std::string& dataFileName) {
     std::ifstream dataFile(dataFileName, std::ios::binary);
     if (!dataFile.is_open()) {
-        std::cerr << "Error: Cannot open " << dataFileName << " for indexing.\n";
+        std::cerr << "Error opening file " << dataFileName << " for indexing.\n";
         return;
     }
 
@@ -69,7 +69,7 @@ void IndexManager::buildIndex(const std::string& dataFileName) {
 void IndexManager::writeIndex(const std::string& indexFileName) const {
     std::ofstream out(indexFileName, std::ios::binary);
     if (!out) {
-        std::cerr << "Error: Cannot open " << indexFileName << " for writing.\n";
+        std::cerr << "Error opening " << indexFileName << " for writing.\n";
         return;
     }
 

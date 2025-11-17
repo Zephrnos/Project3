@@ -2,10 +2,10 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "convertCSV.h"
-#include "readBinaryFile.h"
-#include "HeaderBuffer.h"
-#include "IndexManager.h"
+#include "../headers/convertCSV.h"
+#include "../headers/readBinaryFile.h"
+#include "../headers/HeaderBuffer.h"
+#include "../headers/IndexManager.h"
 #include <algorithm>
 #include <cctype>
 using namespace std;

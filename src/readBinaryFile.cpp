@@ -2,9 +2,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "HeaderBuffer.h"
-#include "readBinaryFile.h"
-#include "ZipCodeRecordBuffer.h"
+#include "../headers/HeaderBuffer.h"
+#include "../headers/readBinaryFile.h"
+#include "../headers/ZipCodeRecordBuffer.h"
 
 using namespace std;
 

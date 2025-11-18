@@ -43,7 +43,7 @@ If your layout does not match this, create the folders manually:
     
     mkdir src headers data
 
-and than copy the submitted header, data, and source files into
+and then copy the submitted header, data, and source files into
 the proper folder.
 
 ------------------------------------
@@ -62,13 +62,13 @@ To build main_p2 on windows machines:
 
 Next, you need to exectute main_p2:
 
-    ./p2
+    ./p2 or .\p2 on windows
 
 After running this you will have a new file in the data folder called:
 
     data/newBinaryPCodes.dat
 
-Once you run main_p2 you can than build main_p2. To build on unix machines:
+Once you run main_p2 you can than build main_p3. To build on unix machines:
 
     g++ -std=c++17 src/main_p3.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p3
 
@@ -78,7 +78,7 @@ To build main_p3 on windows machines:
 
 You can now run main_p3 with the command:
 
-    ./p3
+    ./p3 or .\p3 on windows
 
 When running main_p3, this will perform the BSS creation, searching
 dumping, and the index operations.
@@ -89,11 +89,11 @@ dumping, and the index operations.
 
     Usage:
 
-        ./mainp3 --create <proj2_dat_file> <bss_file> <index_file>
+        ./p3 --create <proj2_dat_file> <bss_file> <index_file>
 
     Example:
 
-        ./mainp3 --create data/newBinaryPCodes.dat zip.bss zip.idx
+        ./p3 --create data/newBinaryPCodes.dat zip.bss zip.idx
 
     Outputs:
 
@@ -106,11 +106,11 @@ dumping, and the index operations.
 
     Usage:
 
-        ./mainp3 --search <bss_file> <index_file> -Z<zip1> [-Z<zip2> ...]
+        ./p3 --search <bss_file> <index_file> -Z<zip1> [-Z<zip2> ...]
 
     Example:
 
-        ./mainp3 --search zip.bss zip.idx -Z55316 -Z90210 -Z00000
+        ./p3 --search zip.bss zip.idx -Z55316 -Z90210 -Z00000
 
     ---------------------------------
     C. Dump Blocks in Logical Order
@@ -118,7 +118,7 @@ dumping, and the index operations.
 
     Usage:
 
-        ./mainp3 --dump-logical <bss_file>
+        ./p3 --dump-logical <bss_file>
 
     ----------------------------------
     D. Dump Blocks in Physical Order
@@ -126,7 +126,7 @@ dumping, and the index operations.
 
     Usage:
 
-        ./mainp3 --dump-physical <bss_file>
+        ./p3 --dump-physical <bss_file>
 
     -------------------
     E. Dump the Index
@@ -134,7 +134,7 @@ dumping, and the index operations.
 
     Usage:
 
-        ./mainp3 --dump-index <index_file>
+        ./p3 --dump-index <index_file>
 
 ---------------------------
 3. Resetting Output Files
@@ -146,4 +146,4 @@ To start fresh:
 
 Then regenerate:
 
-    ./mainp3 --create data/newBinaryPCodes.dat zip.bss zip.idx
+    ./p3 --create data/newBinaryPCodes.dat zip.bss zip.idx

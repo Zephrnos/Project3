@@ -56,6 +56,10 @@ To build main_p2 on unix machines:
 
     g++ -std=c++17 src/main_p2.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p2
 
+To build main_p2 on windows machines:
+
+    g++ -std=c++17 src\main_p2.cpp src\BSSBlock.cpp src\BSSFile.cpp src\BSSIndex.cpp src\convertCSV.cpp src\IndexManager.cpp src\readBinaryFile.cpp -I headers -o p2.exe
+
 Next, you need to exectute main_p2:
 
     ./p2
@@ -67,6 +71,10 @@ After running this you will have a new file in the data folder called:
 Once you run main_p2 you can than build main_p2. To build on unix machines:
 
     g++ -std=c++17 src/main_p3.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p3
+
+To build main_p3 on windows machines:
+
+    g++ -std=c++17 src\main_p3.cpp src\BSSBlock.cpp src\BSSFile.cpp src\BSSIndex.cpp src\convertCSV.cpp src\IndexManager.cpp src\readBinaryFile.cpp -I headers -o p3.exe
 
 You can now run main_p3 with the command:
 

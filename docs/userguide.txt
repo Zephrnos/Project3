@@ -46,9 +46,9 @@ If your layout does not match this, create the folders manually:
 and than copy the submitted header, data, and source files into
 the proper folder.
 
---------------------------
-2. Building the Program
---------------------------
+------------------------------------
+2. Building and Running the program
+------------------------------------
 
 First, make sure you current directory is at the project root.
 
@@ -56,18 +56,7 @@ To build main_p2 on unix machines:
 
     g++ -std=c++17 src/main_p2.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p2
 
-
-Next, build main_p3 on unix machines:
-
-    g++ -std=c++17 src/main_p3.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p3
-
---------------------------
-3. Running main_p2
---------------------------
-main_p2 handles the process from project 2, which converts raw CSV into
-length-indicated data file.
-
-Run: 
+Next, you need to exectute main_p2:
 
     ./p2
 
@@ -75,11 +64,15 @@ After running this you will have a new file in the data folder called:
 
     data/newBinaryPCodes.dat
 
--------------------
-4. Running main_p3
--------------------
+Once you run main_p2 you can than build main_p2. To build on unix machines:
 
-The next step is to run main_p3, this will perform the BSS creation, searching
+    g++ -std=c++17 src/main_p3.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p3
+
+You can now run main_p3 with the command:
+
+    ./p3
+
+When running main_p3, this will perform the BSS creation, searching
 dumping, and the index operations.
 
     --------------------------------------------
@@ -136,7 +129,7 @@ dumping, and the index operations.
         ./mainp3 --dump-index <index_file>
 
 ---------------------------
-5. Resetting Output Files
+3. Resetting Output Files
 ---------------------------
 
 To start fresh:

@@ -1,0 +1,148 @@
+Zip Code Project 3 User Guide
+
+This guide will explain how to setup the directory, and use the command line to 
+compile and run our project.  It will also go over how to use all of the 
+supported commands.
+
+--------------------------
+1. Setting Up Directory
+--------------------------
+Your folder should look like this:
+
+    Project3/
+    ├── src/
+    │   ├── main_p2.cpp
+    │   ├── main_p3.cpp
+    │   ├── BSSBlock.cpp
+    │   ├── BSSFile.cpp
+    │   ├── BSSIndex.cpp
+    │   ├── convertCSV.cpp
+    │   ├── IndexManager.cpp
+    │   └── readBinaryFile.cpp
+    ├── headers/
+    │   ├── BSSBlock.h
+    │   ├── BSSFile.h
+    │   ├── BSSFileHeader.h
+    │   ├── BSSIndex.h
+    │   ├── convertCSV.h
+    │   ├── HeaderBuffer.h
+    │   ├── IndexManager.h
+    │   └── ZipCodeRecordBuffer.h
+    ├── data/
+    │   ├── us_postal_codes.csv
+    │   ├── converted_postal_codes.csv
+    │   ├── new_postal_codes.csv
+    │   ├── newBinaryPCodes.dat    (generated after main_p2 execution)
+    │   └── (any other data files)
+    │ 
+    ├── zip.bss  (generated after creating BSS)
+    └── zip.idx  (generated index)
+
+
+If your layout does not match this, create the folders manually:
+    
+    mkdir src headers data
+
+and than copy the submitted header, data, and source files into
+the proper folder.
+
+--------------------------
+2. Building the Program
+--------------------------
+
+First, make sure you current directory is at the project root.
+
+To build main_p2:
+
+    g++ -std=c++17 src/main_p2.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p2
+
+
+Next, build main_p3:
+
+    g++ -std=c++17 src/main_p3.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p3
+
+--------------------------
+3. Running main_p2
+--------------------------
+main_p2 handles the process from project 2, which converts raw CSV into
+length-indicated data file.
+
+Run: 
+
+    ./p2
+
+After running this you will have a new file in the data folder called:
+
+    data/newBinaryPCodes.dat
+
+-------------------
+4. Running main_p3
+-------------------
+
+The next step is to run main_p3, this will perform the BSS creation, searching
+dumping, and the index operations.
+
+    --------------------------------------------
+    A. Create a Blocked Sequence Set and Index
+    --------------------------------------------
+
+    Usage:
+
+        ./mainp3 --create <proj2_dat_file> <bss_file> <index_file>
+
+    Example:
+
+        ./mainp3 --create data/newBinaryPCodes.dat zip.bss zip.idx
+
+    Outputs:
+
+        zip.bss  → Blocked Sequence Set file  
+        zip.idx  → Simple index file  
+
+    -------------------------
+    B. Search for Zip Codes
+    -------------------------
+
+    Usage:
+
+        ./mainp3 --search <bss_file> <index_file> -Z<zip1> [-Z<zip2> ...]
+
+    Example:
+
+        ./mainp3 --search zip.bss zip.idx -Z55316 -Z90210 -Z00000
+
+    ---------------------------------
+    C. Dump Blocks in Logical Order
+    ---------------------------------
+
+    Usage:
+
+        ./mainp3 --dump-logical <bss_file>
+
+    ----------------------------------
+    D. Dump Blocks in Physical Order
+    ----------------------------------
+
+    Usage:
+
+        ./mainp3 --dump-physical <bss_file>
+
+    -------------------
+    E. Dump the Index
+    -------------------
+
+    Usage:
+
+        ./mainp3 --dump-index <index_file>
+
+---------------------------
+5. Resetting Output Files
+---------------------------
+
+To start fresh:
+
+    rm -f zip.bss zip.idx
+
+Then regenerate:
+
+    ./mainp3 --create data/newBinaryPCodes.dat zip.bss zip.idx

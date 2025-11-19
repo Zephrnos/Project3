@@ -355,7 +355,7 @@ void runSearchTest(const string& bssFile, const string& indexFile) {
             continue;
         }
 
-        cout << "  → Index lookup: Block RBN " << rbn << "\n";
+        cout << "  -> Index lookup: Block RBN " << rbn << "\n";
 
         // Step 2: Read ONLY the indexed block (not entire file)
         BSSBlock block(file.getHeader().getBlockSize());
@@ -367,7 +367,7 @@ void runSearchTest(const string& bssFile, const string& indexFile) {
 
         // Step 3: Unpack records from the block
         vector<ZipCodeRecordBuffer> records = block.unpackAllRecords();
-        cout << "  → Block contains " << records.size() << " records\n";
+        cout << "  -> Block contains " << records.size() << " records\n";
 
         // Step 4: Search within the block
         bool found = false;
@@ -482,7 +482,7 @@ void interactiveSearch(const string& bssFile, const string& indexFile) {
             continue;
         }
 
-        cout << "  → Index indicates block RBN: " << rbn << "\n";
+        cout << "  -> Index indicates block RBN: " << rbn << "\n";
 
         // Step 2: Read the indexed block
         BSSBlock block(file.getHeader().getBlockSize());
@@ -493,7 +493,7 @@ void interactiveSearch(const string& bssFile, const string& indexFile) {
 
         // Step 3: Unpack records from the block
         vector<ZipCodeRecordBuffer> records = block.unpackAllRecords();
-        cout << "  → Block contains " << records.size() << " records\n";
+        cout << "  -> Block contains " << records.size() << " records\n";
 
         // Step 4: Search within the block
         bool found = false;

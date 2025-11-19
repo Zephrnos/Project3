@@ -1,18 +1,13 @@
 #include "../headers/BSSFile.h"
-#include "../headers/HeaderBuffer.h" // For reading P2.0 header
+#include "../headers/HeaderBuffer.h"
 #include <fstream>
 #include <vector>
 #include <algorithm>
 #include <iostream>
 
 BSSFile::BSSFile() : blockSize(512) {
-    // Default block size, will be overwritten when file is opened
 }
 
-/**
- * @brief Creates a new .bss file from a Project 2.0 .dat file.
- * @note Implements Task 3. Reads from the length-indicated file.
- */
 bool BSSFile::create(const std::string& bssFilename, const std::string& proj2DatFile) {
     file.open(bssFilename, std::ios::in | std::ios::out | std::ios::binary | std::ios::trunc);
     if (!file) {
@@ -26,17 +21,13 @@ bool BSSFile::create(const std::string& bssFilename, const std::string& proj2Dat
         return false;
     }
 
-    // 1. Initialize and write BSS header
     header = BSSFileHeader(blockSize);
-    header.setBlockCount(1); // Reserve RBN 0 for header
+    header.setBlockCount(1);
     header.setListHeadRBN(-1);
     header.setAvailHeadRBN(-1);
     header.write(file);
 
-    // 2. Read all records from Project 2.0 .dat file
     std::vector<ZipCodeRecordBuffer> records;
-    
-    // Read the Project 2.0 header first
     HeaderRecordBuffer p2Header;
     if (!p2Header.readHeader(datFile)) {
         std::cerr << "Error reading header from " << proj2DatFile << std::endl;
@@ -62,13 +53,12 @@ bool BSSFile::create(const std::string& bssFilename, const std::string& proj2Dat
             break;
         }
 
-        // Use the unpack method to parse the string
         if (tempRec.unpack(recordString)) {
             records.push_back(tempRec);
             successfulRecords++;
         } else {
             skippedRecords++;
-            if (skippedRecords <= 3) {  // Show first few errors for debugging
+            if (skippedRecords <= 3) {
                 std::cerr << "Skipping invalid record " << i << " (likely header fragment)\n";
                 if (recordString.length() < 100) {
                     std::cerr << "  Content: '" << recordString << "'\n";
@@ -81,46 +71,41 @@ bool BSSFile::create(const std::string& bssFilename, const std::string& proj2Dat
               << skippedRecords << " invalid records)\n";
     datFile.close();
 
-    // Sort records by Zip Code (primary key)
     std::sort(records.begin(), records.end(), [](const auto& a, const auto& b) {
         return a.getZipCode() < b.getZipCode();
     });
 
-    // 3. Pack records into blocks
     header.setRecordCount((uint32_t)records.size());
-    int currentRBN = 1; // Start at RBN 1
+    int currentRBN = 1;
     int prevRBN = -1;
     
     BSSBlock block(blockSize);
     
     for (const auto& rec : records) {
         if (!block.addRecord(rec)) {
-            // Block is full, write it and start a new one
             block.getHeader()->predecessorRBN = prevRBN;
             block.getHeader()->successorRBN = currentRBN + 1;
             block.write(file, currentRBN);
 
             if (prevRBN == -1) {
-                header.setListHeadRBN(currentRBN); // First block
+                header.setListHeadRBN(currentRBN);
             }
             
             prevRBN = currentRBN;
             currentRBN++;
             block.clear();
-            block.addRecord(rec); // Add record to new block
+            block.addRecord(rec);
         }
     }
 
-    // 4. Write the last block
     if (block.getHeader()->recordCount > 0) {
         block.getHeader()->predecessorRBN = prevRBN;
-        block.getHeader()->successorRBN = -1; // Last block
+        block.getHeader()->successorRBN = -1;
         block.write(file, currentRBN);
         if (prevRBN == -1) {
-             header.setListHeadRBN(currentRBN); // Only one block
+             header.setListHeadRBN(currentRBN);
         }
     } else {
-        // Adjust successor of previous block if last block was empty
         if (prevRBN != -1) {
             BSSBlock prevBlock(blockSize);
             readBlock(prevRBN, prevBlock);
@@ -130,8 +115,6 @@ bool BSSFile::create(const std::string& bssFilename, const std::string& proj2Dat
     }
     
     header.setBlockCount(currentRBN + 1);
-
-    // 5. Write updated header
     std::cout << "Writing header: blockCount=" << header.getBlockCount()
               << ", recordCount=" << header.getRecordCount()
               << ", listHeadRBN=" << header.getListHeadRBN() << "\n";
@@ -140,7 +123,6 @@ bool BSSFile::create(const std::string& bssFilename, const std::string& proj2Dat
     return true;
 }
 
-// Opens an existing .bss file
 bool BSSFile::open(const std::string& bssFilename) {
     std::cout << "[BSSFile::open] Opening file: " << bssFilename << "\n";
     file.open(bssFilename, std::ios::in | std::ios::out | std::ios::binary);
@@ -165,21 +147,16 @@ void BSSFile::close() {
     if (file.is_open()) file.close();
 }
 
-// Reads a block into the provided block object
 bool BSSFile::readBlock(int rbn, BSSBlock& block) {
     if (!file.is_open()) return false;
     return block.read(file, rbn, blockSize);
 }
 
-// Writes a block from the provided block object
 bool BSSFile::writeBlock(int rbn, const BSSBlock& block) {
     if (!file.is_open()) return false;
     return block.write(file, rbn);
 }
 
-/**
- * @brief Dumps blocks in their physical RBN order (Task 8).
- */
 void BSSFile::dumpPhysical(std::ostream& os) {
     os << "\n--- Physical Block Dump ---\n";
     BSSBlock block(blockSize);
@@ -196,9 +173,6 @@ void BSSFile::dumpPhysical(std::ostream& os) {
     os << "---------------------------\n";
 }
 
-/**
- * @brief Dumps blocks by following the logical sequence set links (Task 8).
- */
 void BSSFile::dumpLogical(std::ostream& os) {
     os << "\n--- Logical Block Dump ---\n";
     BSSBlock block(blockSize);
@@ -226,7 +200,431 @@ void BSSFile::dumpLogical(std::ostream& os) {
     os << "-------------------------\n";
 }
 
-// --- Accessors ---
+bool BSSFile::addRecord(const ZipCodeRecordBuffer& record) {
+    if (!file.is_open()) {
+        std::cerr << "Error: File not open for adding record\n";
+        return false;
+    }
+
+    std::string zipCode = record.getZipCode();
+    int targetRBN = findInsertionBlock(zipCode);
+    
+    if (targetRBN == -1) {
+        std::cerr << "Error: Could not find insertion block\n";
+        return false;
+    }
+
+    BSSBlock block(blockSize);
+    if (!readBlock(targetRBN, block)) {
+        std::cerr << "Error: Could not read block " << targetRBN << "\n";
+        return false;
+    }
+
+    if (block.addRecord(record)) {
+        if (!writeBlock(targetRBN, block)) {
+            std::cerr << "Error: Could not write block " << targetRBN << "\n";
+            return false;
+        }
+        
+        header.setRecordCount(header.getRecordCount() + 1);
+        header.write(file);
+        
+        std::cout << "[ADD] Record " << zipCode << " added to block " << targetRBN << " (no split)\n";
+        return true;
+    } else {
+        std::cout << "[SPLIT] Block " << targetRBN << " is full, splitting...\n";
+        return splitBlock(targetRBN, record);
+    }
+}
+
+bool BSSFile::deleteRecord(const std::string& zipCode) {
+    if (!file.is_open()) {
+        std::cerr << "Error: File not open for deleting record\n";
+        return false;
+    }
+
+    int targetRBN = findInsertionBlock(zipCode);
+    
+    if (targetRBN == -1) {
+        std::cerr << "Error: Could not find block for zip code " << zipCode << "\n";
+        return false;
+    }
+
+    BSSBlock block(blockSize);
+    if (!readBlock(targetRBN, block)) {
+        std::cerr << "Error: Could not read block " << targetRBN << "\n";
+        return false;
+    }
+
+    std::vector<ZipCodeRecordBuffer> records = block.unpackAllRecords();
+    
+    bool found = false;
+    for (auto it = records.begin(); it != records.end(); ++it) {
+        if (it->getZipCode() == zipCode) {
+            records.erase(it);
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        std::cout << "[DELETE] Record " << zipCode << " not found in block " << targetRBN << "\n";
+        return false;
+    }
+
+    uint32_t minRecords = getMinRecordCount();
+    
+    if (records.size() >= minRecords) {
+        block.clear();
+        for (const auto& rec : records) {
+            block.addRecord(rec);
+        }
+        
+        if (!writeBlock(targetRBN, block)) {
+            std::cerr << "Error: Could not write block " << targetRBN << "\n";
+            return false;
+        }
+        
+        header.setRecordCount(header.getRecordCount() - 1);
+        header.write(file);
+        
+        std::cout << "[DELETE] Record " << zipCode << " deleted from block " << targetRBN 
+                  << " (no redistribution needed, " << records.size() << " records remain)\n";
+        return true;
+    } else {
+        std::cout << "[DELETE] Record " << zipCode << " deleted from block " << targetRBN 
+                  << " (" << records.size() << " records remain, below minimum of " << minRecords << ")\n";
+        
+        BSSBlock::BlockHeader* h = block.getHeader();
+        int adjacentRBN = -1;
+        
+        if (h->successorRBN != -1) {
+            adjacentRBN = h->successorRBN;
+        } else if (h->predecessorRBN != -1) {
+            adjacentRBN = h->predecessorRBN;
+        }
+        
+        if (adjacentRBN == -1) {
+            block.clear();
+            for (const auto& rec : records) {
+                block.addRecord(rec);
+            }
+            writeBlock(targetRBN, block);
+            header.setRecordCount(header.getRecordCount() - 1);
+            header.write(file);
+            std::cout << "[DELETE] Only one block in file, no redistribution possible\n";
+            return true;
+        }
+        
+        // Check if we should merge or redistribute
+        BSSBlock adjacentBlock(blockSize);
+        if (!readBlock(adjacentRBN, adjacentBlock)) {
+            std::cerr << "Error: Could not read adjacent block\n";
+            return false;
+        }
+        
+        if (shouldMerge(block, adjacentBlock)) {
+            std::cout << "[MERGE] Merging blocks " << targetRBN << " and " << adjacentRBN << "\n";
+            if (mergeBlocks(targetRBN, adjacentRBN)) {
+                header.setRecordCount(header.getRecordCount() - 1);
+                header.write(file);
+                return true;
+            }
+        } else {
+            std::cout << "[REDISTRIBUTE] Redistributing blocks " << targetRBN << " and " << adjacentRBN << "\n";
+            if (redistributeBlocks(targetRBN, adjacentRBN)) {
+                header.setRecordCount(header.getRecordCount() - 1);
+                header.write(file);
+                return true;
+            }
+        }
+        
+        std::cerr << "Error: Could not handle underflow\n";
+        return false;
+    }
+}
+
+int BSSFile::getAvailBlock() {
+    int availRBN = header.getAvailHeadRBN();
+    
+    if (availRBN != -1) {
+        BSSBlock availBlock(blockSize);
+        if (readBlock(availRBN, availBlock)) {
+            int nextAvailRBN = availBlock.getHeader()->successorRBN;
+            header.setAvailHeadRBN(nextAvailRBN);
+            header.write(file);
+            
+            std::cout << "[AVAIL] Reusing block " << availRBN << " from avail list\n";
+            return availRBN;
+        }
+    }
+    
+    int newRBN = header.getBlockCount();
+    header.setBlockCount(newRBN + 1);
+    header.write(file);
+    
+    std::cout << "[NEW] Creating new block " << newRBN << "\n";
+    return newRBN;
+}
+
+void BSSFile::addToAvailList(int rbn) {
+    BSSBlock block(blockSize);
+    int currentAvailHead = header.getAvailHeadRBN();
+    block.makeAvailBlock(currentAvailHead);
+    writeBlock(rbn, block);
+    header.setAvailHeadRBN(rbn);
+    header.write(file);
+    std::cout << "[AVAIL] Block " << rbn << " added to avail list\n";
+}
+
+bool BSSFile::splitBlock(int fullBlockRBN, const ZipCodeRecordBuffer& newRecord) {
+    BSSBlock fullBlock(blockSize);
+    if (!readBlock(fullBlockRBN, fullBlock)) {
+        std::cerr << "Error: Could not read block " << fullBlockRBN << " for splitting\n";
+        return false;
+    }
+
+    std::vector<ZipCodeRecordBuffer> records = fullBlock.unpackAllRecords();
+    records.push_back(newRecord);
+    
+    std::sort(records.begin(), records.end(), [](const auto& a, const auto& b) {
+        return a.getZipCode() < b.getZipCode();
+    });
+
+    size_t midPoint = records.size() / 2;
+    
+    BSSBlock block1(blockSize);
+    for (size_t i = 0; i < midPoint; ++i) {
+        if (!block1.addRecord(records[i])) {
+            std::cerr << "Error: Could not add record to block1 during split\n";
+            return false;
+        }
+    }
+
+    int newBlockRBN = getAvailBlock();
+    if (newBlockRBN == -1) {
+        std::cerr << "Error: Could not get available block for split\n";
+        return false;
+    }
+
+    BSSBlock block2(blockSize);
+    for (size_t i = midPoint; i < records.size(); ++i) {
+        if (!block2.addRecord(records[i])) {
+            std::cerr << "Error: Could not add record to block2 during split\n";
+            return false;
+        }
+    }
+
+    BSSBlock::BlockHeader* h1 = block1.getHeader();
+    BSSBlock::BlockHeader* h2 = block2.getHeader();
+    BSSBlock::BlockHeader* oldH = fullBlock.getHeader();
+
+    h1->predecessorRBN = oldH->predecessorRBN;
+    h1->successorRBN = newBlockRBN;
+    h2->predecessorRBN = fullBlockRBN;
+    h2->successorRBN = oldH->successorRBN;
+
+    if (!writeBlock(fullBlockRBN, block1)) {
+        std::cerr << "Error: Could not write block1 during split\n";
+        return false;
+    }
+    
+    if (!writeBlock(newBlockRBN, block2)) {
+        std::cerr << "Error: Could not write block2 during split\n";
+        return false;
+    }
+
+    if (h2->successorRBN != -1) {
+        BSSBlock nextBlock(blockSize);
+        if (readBlock(h2->successorRBN, nextBlock)) {
+            nextBlock.getHeader()->predecessorRBN = newBlockRBN;
+            writeBlock(h2->successorRBN, nextBlock);
+        }
+    }
+
+    if (h1->predecessorRBN != -1) {
+        BSSBlock prevBlock(blockSize);
+        if (readBlock(h1->predecessorRBN, prevBlock)) {
+            prevBlock.getHeader()->successorRBN = fullBlockRBN;
+            writeBlock(h1->predecessorRBN, prevBlock);
+        }
+    } else {
+        header.setListHeadRBN(fullBlockRBN);
+    }
+
+    header.setRecordCount(header.getRecordCount() + 1);
+    header.write(file);
+
+    std::cout << "[SPLIT] Block " << fullBlockRBN << " split into blocks " 
+              << fullBlockRBN << " and " << newBlockRBN << "\n";
+    std::cout << "  Block " << fullBlockRBN << " now has " << h1->recordCount 
+              << " records (highest: " << block1.getHighestKey() << ")\n";
+    std::cout << "  Block " << newBlockRBN << " now has " << h2->recordCount 
+              << " records (highest: " << block2.getHighestKey() << ")\n";
+
+    return true;
+}
+
+int BSSFile::findInsertionBlock(const std::string& zipCode) {
+    int rbn = header.getListHeadRBN();
+    
+    if (rbn == -1) {
+        std::cerr << "Error: No active blocks in file\n";
+        return -1;
+    }
+
+    BSSBlock block(blockSize);
+    
+    while (rbn != -1) {
+        if (!readBlock(rbn, block)) {
+            std::cerr << "Error: Could not read block " << rbn << "\n";
+            return -1;
+        }
+
+        std::string highestKey = block.getHighestKey();
+        int nextRBN = block.getHeader()->successorRBN;
+
+        if (nextRBN == -1 || zipCode <= highestKey) {
+            return rbn;
+        }
+
+        rbn = nextRBN;
+    }
+
+    return -1;
+}
+
+bool BSSFile::redistributeBlocks(int rbn1, int rbn2) {
+    BSSBlock block1(blockSize);
+    BSSBlock block2(blockSize);
+    
+    if (!readBlock(rbn1, block1) || !readBlock(rbn2, block2)) {
+        std::cerr << "Error: Could not read blocks for redistribution\n";
+        return false;
+    }
+
+    std::vector<ZipCodeRecordBuffer> records1 = block1.unpackAllRecords();
+    std::vector<ZipCodeRecordBuffer> records2 = block2.unpackAllRecords();
+    
+    std::vector<ZipCodeRecordBuffer> allRecords;
+    allRecords.insert(allRecords.end(), records1.begin(), records1.end());
+    allRecords.insert(allRecords.end(), records2.begin(), records2.end());
+    
+    std::sort(allRecords.begin(), allRecords.end(), [](const auto& a, const auto& b) {
+        return a.getZipCode() < b.getZipCode();
+    });
+
+    size_t midPoint = allRecords.size() / 2;
+    
+    block1.clear();
+    for (size_t i = 0; i < midPoint; ++i) {
+        if (!block1.addRecord(allRecords[i])) {
+            std::cerr << "Error: Could not add record to block1 during redistribution\n";
+            return false;
+        }
+    }
+
+    block2.clear();
+    for (size_t i = midPoint; i < allRecords.size(); ++i) {
+        if (!block2.addRecord(allRecords[i])) {
+            std::cerr << "Error: Could not add record to block2 during redistribution\n";
+            return false;
+        }
+    }
+
+    if (!writeBlock(rbn1, block1) || !writeBlock(rbn2, block2)) {
+        std::cerr << "Error: Could not write blocks during redistribution\n";
+        return false;
+    }
+
+    std::cout << "[REDISTRIBUTE] Blocks " << rbn1 << " and " << rbn2 << " redistributed\n";
+    std::cout << "  Block " << rbn1 << ": " << block1.getHeader()->recordCount 
+              << " records (highest: " << block1.getHighestKey() << ")\n";
+    std::cout << "  Block " << rbn2 << ": " << block2.getHeader()->recordCount 
+              << " records (highest: " << block2.getHighestKey() << ")\n";
+
+    return true;
+}
+
+bool BSSFile::mergeBlocks(int rbn1, int rbn2) {
+    BSSBlock block1(blockSize);
+    BSSBlock block2(blockSize);
+    
+    if (!readBlock(rbn1, block1) || !readBlock(rbn2, block2)) {
+        std::cerr << "Error: Could not read blocks for merging\n";
+        return false;
+    }
+
+    std::vector<ZipCodeRecordBuffer> records1 = block1.unpackAllRecords();
+    std::vector<ZipCodeRecordBuffer> records2 = block2.unpackAllRecords();
+    
+    std::vector<ZipCodeRecordBuffer> allRecords;
+    allRecords.insert(allRecords.end(), records1.begin(), records1.end());
+    allRecords.insert(allRecords.end(), records2.begin(), records2.end());
+    
+    std::sort(allRecords.begin(), allRecords.end(), [](const auto& a, const auto& b) {
+        return a.getZipCode() < b.getZipCode();
+    });
+
+    block1.clear();
+    for (const auto& rec : allRecords) {
+        if (!block1.addRecord(rec)) {
+            std::cerr << "Error: Could not add record to block1 during merge\n";
+            return false;
+        }
+    }
+
+    BSSBlock::BlockHeader* h1 = block1.getHeader();
+    BSSBlock::BlockHeader* h2 = block2.getHeader();
+    
+    h1->successorRBN = h2->successorRBN;
+
+    if (!writeBlock(rbn1, block1)) {
+        std::cerr << "Error: Could not write merged block\n";
+        return false;
+    }
+
+    if (h1->successorRBN != -1) {
+        BSSBlock nextBlock(blockSize);
+        if (readBlock(h1->successorRBN, nextBlock)) {
+            nextBlock.getHeader()->predecessorRBN = rbn1;
+            writeBlock(h1->successorRBN, nextBlock);
+        }
+    }
+
+    addToAvailList(rbn2);
+
+    std::cout << "[MERGE] Blocks " << rbn1 << " and " << rbn2 << " merged into block " << rbn1 << "\n";
+    std::cout << "  Merged block " << rbn1 << " now has " << h1->recordCount 
+              << " records (highest: " << block1.getHighestKey() << ")\n";
+    std::cout << "  Block " << rbn2 << " cleared and added to avail list\n";
+
+    return true;
+}
+
+bool BSSFile::shouldMerge(const BSSBlock& block1, const BSSBlock& block2) const {
+    uint32_t totalRecords = block1.getHeader()->recordCount + block2.getHeader()->recordCount;
+    uint32_t headerSize = sizeof(BSSBlock::BlockHeader);
+    uint32_t availableSpace = blockSize - headerSize;
+    uint32_t avgRecordSize = 70;
+    uint32_t maxRecords = availableSpace / avgRecordSize;
+    return totalRecords <= maxRecords;
+}
+
+bool BSSFile::isBelowMinCapacity(const BSSBlock& block) const {
+    uint32_t minRecords = getMinRecordCount();
+    return block.getHeader()->recordCount < minRecords;
+}
+
+uint32_t BSSFile::getMinRecordCount() const {
+    uint32_t headerSize = sizeof(BSSBlock::BlockHeader);
+    uint32_t availableSpace = blockSize - headerSize;
+    uint32_t avgRecordSize = 62;
+    uint32_t maxRecords = availableSpace / avgRecordSize;
+    uint32_t minRecords = maxRecords / 2;
+    return (minRecords > 0) ? minRecords : 1;
+}
+
 const BSSFileHeader& BSSFile::getHeader() const {
     return header;
 }

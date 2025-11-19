@@ -516,12 +516,239 @@ void interactiveSearch(const string& bssFile, const string& indexFile) {
     file.close();
 }
 
+/**
+ * @brief Phase 1 Test: Record Addition with Block Splitting
+ */
+void testRecordAddition(const string& bssFile, const string& indexFile) {
+    cout << "\n" << string(80, '=') << "\n";
+    cout << "PHASE 1 TEST: RECORD ADDITION WITH BLOCK SPLITTING\n";
+    cout << string(80, '=') << "\n\n";
+
+    // Open BSS file
+    BSSFile file;
+    if (!file.open(bssFile)) {
+        cerr << "Error: Could not open BSS file.\n";
+        return;
+    }
+
+    cout << "Initial State:\n";
+    cout << "  Total Blocks: " << file.getHeader().getBlockCount() << "\n";
+    cout << "  Total Records: " << file.getHeader().getRecordCount() << "\n";
+    cout << "  Avail Head RBN: " << file.getHeader().getAvailHeadRBN() << "\n\n";
+
+    // Show initial dumps (first 10 blocks only to avoid issues)
+    cout << "=== Initial Logical Dump (first 10 blocks) ===\n";
+    BSSBlock block(file.getHeader().getBlockSize());
+    int rbn = file.getHeader().getListHeadRBN();
+    int count = 0;
+    while (rbn != -1 && count < 10) {
+        if (file.readBlock(rbn, block)) {
+            BSSBlock::BlockHeader* h = block.getHeader();
+            cout << "RBN " << rbn << ": "
+                 << "Type: " << h->blockType << ", "
+                 << "Records: " << h->recordCount << ", "
+                 << "Prev: " << h->predecessorRBN << ", "
+                 << "Next: " << h->successorRBN << ", "
+                 << "HighestKey: " << block.getHighestKey() << "\n";
+            rbn = h->successorRBN;
+            count++;
+        } else {
+            break;
+        }
+    }
+    cout << "...(showing first 10 blocks only)\n";
+
+    // Test 1: Add a record that fits (no split)
+    cout << "\n" << string(80, '-') << "\n";
+    cout << "TEST 1: Add record that fits in existing block (no split)\n";
+    cout << string(80, '-') << "\n";
+    
+    ZipCodeRecordBuffer newRec1;
+    newRec1.unpack("10001.5,Test City 1,NY,Test County,40.7500,-73.9967");
+    
+    cout << "\nAdding record: " << newRec1.getZipCode() << "\n";
+    if (file.addRecord(newRec1)) {
+        cout << "✓ Record added successfully\n";
+    } else {
+        cout << "✗ Failed to add record\n";
+    }
+
+    cout << "\nAfter Addition (No Split):\n";
+    cout << "  Total Blocks: " << file.getHeader().getBlockCount() << "\n";
+    cout << "  Total Records: " << file.getHeader().getRecordCount() << "\n\n";
+
+    // Test 2: Add records until a split occurs
+    cout << "\n" << string(80, '-') << "\n";
+    cout << "TEST 2: Add records to force block split\n";
+    cout << string(80, '-') << "\n";
+
+    // Add multiple records to force a split
+    vector<string> testZips = {
+        "10002.1,Test City 2,NY,Test County,40.7500,-73.9967",
+        "10002.2,Test City 3,NY,Test County,40.7500,-73.9967",
+        "10002.3,Test City 4,NY,Test County,40.7500,-73.9967",
+        "10002.4,Test City 5,NY,Test County,40.7500,-73.9967",
+        "10002.5,Test City 6,NY,Test County,40.7500,-73.9967"
+    };
+
+    int addedCount = 0;
+    for (const auto& zipData : testZips) {
+        ZipCodeRecordBuffer rec;
+        rec.unpack(zipData);
+        cout << "\nAdding record: " << rec.getZipCode() << "\n";
+        if (file.addRecord(rec)) {
+            addedCount++;
+        } else {
+            cout << "✗ Failed to add record\n";
+            break;
+        }
+    }
+
+    cout << "\n✓ Successfully added " << addedCount << " records\n";
+    cout << "\nAfter Additions (with potential splits):\n";
+    cout << "  Total Blocks: " << file.getHeader().getBlockCount() << "\n";
+    cout << "  Total Records: " << file.getHeader().getRecordCount() << "\n";
+    cout << "  Avail Head RBN: " << file.getHeader().getAvailHeadRBN() << "\n\n";
+
+    // Show final dumps (first 10 blocks only)
+    cout << "=== Final Logical Dump (first 10 blocks) ===\n";
+    rbn = file.getHeader().getListHeadRBN();
+    count = 0;
+    while (rbn != -1 && count < 10) {
+        if (file.readBlock(rbn, block)) {
+            BSSBlock::BlockHeader* h = block.getHeader();
+            cout << "RBN " << rbn << ": "
+                 << "Type: " << h->blockType << ", "
+                 << "Records: " << h->recordCount << ", "
+                 << "Prev: " << h->predecessorRBN << ", "
+                 << "Next: " << h->successorRBN << ", "
+                 << "HighestKey: " << block.getHighestKey() << "\n";
+            rbn = h->successorRBN;
+            count++;
+        } else {
+            break;
+        }
+    }
+    cout << "...(showing first 10 blocks only)\n";
+
+    // Compare dumps
+    cout << "\n" << string(80, '-') << "\n";
+    cout << "DUMP COMPARISON:\n";
+    cout << "Physical and Logical dumps may now differ if avail blocks were reused!\n";
+    cout << "Run full dumps separately if needed.\n";
+    cout << string(80, '-') << "\n";
+
+    file.close();
+
+    // Rebuild index
+    cout << "\nRebuilding index after additions...\n";
+    if (file.open(bssFile)) {
+        BSSIndex index;
+        index.build(file);
+        index.write(indexFile);
+        cout << "✓ Index rebuilt and saved\n";
+        
+        cout << "\n=== Updated Index Dump ===\n";
+        index.dump(cout);
+        
+        file.close();
+    }
+
+    cout << "\n" << string(80, '=') << "\n";
+    cout << "PHASE 1 TEST COMPLETE\n";
+    cout << string(80, '=') << "\n\n";
+}
+
+/**
+ * @brief Create a small test BSS file for testing
+ */
+void createSmallTestFile(const string& bssFile, int blockSize = 128) {
+    cout << "\n=== Creating Small Test BSS File ===\n";
+    cout << "Block Size: " << blockSize << " bytes\n";
+    cout << "Expected capacity: ~6 records per block\n\n";
+
+    // Create a small test data file first
+    string testDataFile = "Data/test_small.dat";
+    ofstream testData(testDataFile, ios::binary);
+    
+    if (!testData) {
+        cerr << "Error: Could not create test data file\n";
+        return;
+    }
+
+    // Write header
+    string headerStr = "Zip,Placename,State,County,Lat,Long";
+    uint32_t headerLen = (uint32_t)headerStr.length();
+    uint32_t recordCount = 20; // Small number of records
+    
+    testData.write(reinterpret_cast<const char*>(&headerLen), sizeof(headerLen));
+    testData.write(headerStr.c_str(), headerLen);
+    testData.write(reinterpret_cast<const char*>(&recordCount), sizeof(recordCount));
+
+    // Write test records
+    vector<string> testRecords = {
+        "10001,New York,NY,New York,40.7500,-73.9967",
+        "10002,New York,NY,New York,40.7500,-73.9967",
+        "10003,New York,NY,New York,40.7500,-73.9967",
+        "10004,New York,NY,New York,40.7500,-73.9967",
+        "10005,New York,NY,New York,40.7500,-73.9967",
+        "10006,New York,NY,New York,40.7500,-73.9967",
+        "10007,New York,NY,New York,40.7500,-73.9967",
+        "10008,New York,NY,New York,40.7500,-73.9967",
+        "10009,New York,NY,New York,40.7500,-73.9967",
+        "10010,New York,NY,New York,40.7500,-73.9967",
+        "10011,New York,NY,New York,40.7500,-73.9967",
+        "10012,New York,NY,New York,40.7500,-73.9967",
+        "10013,New York,NY,New York,40.7500,-73.9967",
+        "10014,New York,NY,New York,40.7500,-73.9967",
+        "10015,New York,NY,New York,40.7500,-73.9967",
+        "10016,New York,NY,New York,40.7500,-73.9967",
+        "10017,New York,NY,New York,40.7500,-73.9967",
+        "10018,New York,NY,New York,40.7500,-73.9967",
+        "10019,New York,NY,New York,40.7500,-73.9967",
+        "10020,New York,NY,New York,40.7500,-73.9967"
+    };
+
+    for (const auto& rec : testRecords) {
+        uint32_t recLen = (uint32_t)rec.length();
+        testData.write(reinterpret_cast<const char*>(&recLen), sizeof(recLen));
+        testData.write(rec.c_str(), recLen);
+    }
+
+    testData.close();
+    cout << "✓ Test data file created: " << testDataFile << "\n";
+
+    // Now create BSS file from test data
+    BSSFile file;
+    // Temporarily modify block size (would need to pass as parameter)
+    // For now, use default 512
+    if (file.create(bssFile, testDataFile)) {
+        cout << "✓ Small test BSS file created: " << bssFile << "\n";
+        file.close();
+        
+        // Show structure
+        if (file.open(bssFile)) {
+            cout << "\nTest File Structure:\n";
+            cout << "  Block Size: " << file.getHeader().getBlockSize() << " bytes\n";
+            cout << "  Total Blocks: " << file.getHeader().getBlockCount() << "\n";
+            cout << "  Total Records: " << file.getHeader().getRecordCount() << "\n";
+            
+            file.dumpLogical(cout);
+            file.close();
+        }
+    } else {
+        cerr << "✗ Failed to create small test BSS file\n";
+    }
+}
+
 void printUsage(const char* programName) {
     cout << "\nUsage:\n";
     cout << "  " << programName << " -i | --interactive\n";
     cout << "      Start interactive zip code lookup mode\n\n";
     cout << "  " << programName << " --test\n";
     cout << "      Run search test demonstration with valid and invalid zip codes\n\n";
+    cout << "  " << programName << " --test-add\n";
+    cout << "      Run record addition test (Phase 1: block splitting)\n\n";
     cout << "  " << programName << " <bss_file> -Z<zip1> [-Z<zip2> ...]\n";
     cout << "      Search for specific zip codes\n\n";
     cout << "  " << programName << "\n";
@@ -529,11 +756,13 @@ void printUsage(const char* programName) {
     cout << "Arguments:\n";
     cout << "  -i, --interactive  Start interactive mode\n";
     cout << "  --test             Run search test demonstration\n";
+    cout << "  --test-add         Run record addition test (Phase 1)\n";
     cout << "  <bss_file>         Path to the blocked sequence set file\n";
     cout << "  -Z<zipcode>        Zip code to search for (e.g., -Z10001)\n\n";
     cout << "Examples:\n";
     cout << "  " << programName << " -i\n";
     cout << "  " << programName << " --test\n";
+    cout << "  " << programName << " --test-add\n";
     cout << "  " << programName << " Data/zipCodes.bss -Z10001\n";
     cout << "  " << programName << " Data/zipCodes.bss -Z10001 -Z90210 -Z60601\n\n";
 }
@@ -542,6 +771,31 @@ int main(int argc, char* argv[]) {
     const string defaultBinaryFile = "Data/newBinaryPCodes.dat";
     const string defaultBssFile = "Data/zipCodes.bss";
     const string defaultBssIndexFile = "Data/zipCodes.bss.idx";
+
+    // Check for addition test mode flag
+    if (argc == 2 && string(argv[1]) == "--test-add") {
+        cout << "=== RECORD ADDITION TEST MODE ===\n\n";
+        
+        // Ensure binary file exists
+        ifstream testBin(defaultBinaryFile, ios::binary);
+        if (!testBin.good()) {
+            cout << "Binary file missing — rebuilding from CSV...\n";
+            binaryToCSV();
+        }
+        testBin.close();
+
+        // Create BSS file if needed
+        ifstream testBSS(defaultBssFile, ios::binary);
+        if (!testBSS.good()) {
+            cout << "BSS file missing — creating from binary file...\n";
+            createBSSFile(defaultBinaryFile, defaultBssFile);
+        }
+        testBSS.close();
+
+        // Run record addition test
+        testRecordAddition(defaultBssFile, defaultBssIndexFile);
+        return 0;
+    }
 
     // Check for test mode flag
     if (argc == 2 && string(argv[1]) == "--test") {

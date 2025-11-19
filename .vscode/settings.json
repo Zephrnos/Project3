@@ -27,8 +27,7 @@
         "iomanip": "cpp",
         "cstring": "cpp",
         "map": "cpp",
-        "limits": "cpp",
-        "iosfwd": "cpp"
+        "limits": "cpp"
     },
     "emmet.includeLanguages": {
         "cpp": "html"

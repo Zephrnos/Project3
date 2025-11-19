@@ -2,10 +2,10 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "convertCSV.h"
-#include "readBinaryFile.h"
-#include "HeaderBuffer.h"
-#include "IndexManager.h"
+#include "../headers/convertCSV.h"
+#include "../headers/readBinaryFile.h"
+#include "../headers/HeaderBuffer.h"
+#include "../headers/IndexManager.h"
 #include <algorithm>
 #include <cctype>
 using namespace std;
@@ -82,7 +82,7 @@ void processFile(string& inputFileName, const string& outputFileName) {
 
     IndexManager index;
     index.buildIndex(outputFileName); // Scan binary file for ZIP → offset map
-    index.writeIndex("../data/zip.idx"); // Save index to Data folder
+    index.writeIndex("data/zip.idx"); // Save index to Data folder
 
     inputFile.close();
     outputFile.close();
@@ -96,9 +96,9 @@ void lenRead(ofstream& output, const string& record) {
 }
 
 void binaryToCSV() {
-    string inputCSVFileName = "../data/us_postal_codes.csv";
-    string binaryFile = "../data/newBinaryPCodes.dat";
-	string outputCSVFile = "../data/converted_postal_codes.csv";
+    string inputCSVFileName = "data/us_postal_codes.csv";
+    string binaryFile = "data/newBinaryPCodes.dat";
+	string outputCSVFile = "data/converted_postal_codes.csv";
 
     processFile(inputCSVFileName, binaryFile);
 	readBinaryFile(binaryFile, outputCSVFile);

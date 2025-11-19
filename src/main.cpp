@@ -282,7 +282,7 @@ void searchWithIndex(const string& bssFile, const string& indexFile, const vecto
         bool found = false;
         for (const auto& rec : records) {
             if (rec.getZipCode() == zip) {
-                cout << "  ✓ Found: ";
+                cout << "  [FOUND]: ";
                 rec.print();
                 found = true;
                 break;
@@ -291,7 +291,7 @@ void searchWithIndex(const string& bssFile, const string& indexFile, const vecto
 
         // Step 5: Confirm if not found after searching the block
         if (!found) {
-            cout << "  ✗ ZIP code " << zip << " not found in block " << rbn
+            cout << "  [NOT FOUND]: ZIP code " << zip << " not found in block " << rbn
                  << " (block was read, unpacked, and searched).\n";
         }
     }
@@ -350,7 +350,7 @@ void runSearchTest(const string& bssFile, const string& indexFile) {
         // Step 1: Use index to find the block (index is in RAM)
         int rbn = index.findRBN(zip);
         if (rbn == -1) {
-            cout << "  ✗ INVALID: ZIP code " << zip << " not found (no matching block in index)\n";
+            cout << "  [INVALID]: ZIP code " << zip << " not found (no matching block in index)\n";
             invalidCount++;
             continue;
         }
@@ -360,7 +360,7 @@ void runSearchTest(const string& bssFile, const string& indexFile) {
         // Step 2: Read ONLY the indexed block (not entire file)
         BSSBlock block(file.getHeader().getBlockSize());
         if (!file.readBlock(rbn, block)) {
-            cerr << "  ✗ ERROR: Could not read block " << rbn << "\n";
+            cerr << "  [ERROR]: Could not read block " << rbn << "\n";
             invalidCount++;
             continue;
         }
@@ -373,7 +373,7 @@ void runSearchTest(const string& bssFile, const string& indexFile) {
         bool found = false;
         for (const auto& rec : records) {
             if (rec.getZipCode() == zip) {
-                cout << "  ✓ VALID: Found in block " << rbn << "\n";
+                cout << "  [VALID]: Found in block " << rbn << "\n";
                 cout << "     ";
                 rec.print();
                 found = true;
@@ -384,7 +384,7 @@ void runSearchTest(const string& bssFile, const string& indexFile) {
 
         // Step 5: Confirm not found after searching the block
         if (!found) {
-            cout << "  ✗ INVALID: ZIP code " << zip << " not found in block " << rbn << "\n";
+            cout << "  [INVALID]: ZIP code " << zip << " not found in block " << rbn << "\n";
             cout << "     (Block was read, unpacked, and searched - record does not exist)\n";
             invalidCount++;
         }
@@ -399,10 +399,15 @@ void runSearchTest(const string& bssFile, const string& indexFile) {
     cout << "Total searches: " << testZips.size() << "\n";
     cout << "Valid zip codes found: " << validCount << "\n";
     cout << "Invalid zip codes: " << invalidCount << "\n";
-    cout << "\n✓ Index was loaded into RAM\n";
-    cout << "✓ BSS file was NEVER fully loaded into RAM\n";
-    cout << "✓ Only individual blocks were read as needed\n";
+    cout << "\n[OK] Index was loaded into RAM\n";
+    cout << "[OK] BSS file was NEVER fully loaded into RAM\n";
+    cout << "[OK] Only individual blocks were read as needed\n";
     cout << string(80, '=') << "\n\n";
+    
+    // Pause to keep console open
+    cout << "Press Enter to exit...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
 }
 
 /**
@@ -473,7 +478,7 @@ void interactiveSearch(const string& bssFile, const string& indexFile) {
         // Step 1: Use index to find the block
         int rbn = index.findRBN(zipCode);
         if (rbn == -1) {
-            cout << "  ✗ ZIP code " << zipCode << " not found (no matching block in index).\n";
+            cout << "  [NOT FOUND]: ZIP code " << zipCode << " not found (no matching block in index).\n";
             continue;
         }
 
@@ -482,7 +487,7 @@ void interactiveSearch(const string& bssFile, const string& indexFile) {
         // Step 2: Read the indexed block
         BSSBlock block(file.getHeader().getBlockSize());
         if (!file.readBlock(rbn, block)) {
-            cerr << "  ✗ Error reading block " << rbn << "\n";
+            cerr << "  [ERROR]: Error reading block " << rbn << "\n";
             continue;
         }
 
@@ -494,7 +499,7 @@ void interactiveSearch(const string& bssFile, const string& indexFile) {
         bool found = false;
         for (const auto& rec : records) {
             if (rec.getZipCode() == zipCode) {
-                cout << "  ✓ FOUND:\n    ";
+                cout << "  [FOUND]:\n    ";
                 rec.print();
                 found = true;
                 break;
@@ -503,7 +508,7 @@ void interactiveSearch(const string& bssFile, const string& indexFile) {
 
         // Step 5: Confirm if not found after searching the block
         if (!found) {
-            cout << "  ✗ ZIP code " << zipCode << " not found in block " << rbn << "\n";
+            cout << "  [NOT FOUND]: ZIP code " << zipCode << " not found in block " << rbn << "\n";
             cout << "    (block was read, unpacked, and searched)\n";
         }
     }
@@ -672,6 +677,11 @@ int main(int argc, char* argv[]) {
 
     // Perform index-based search
     searchWithIndex(bssFile, indexFile, zipCodes);
+
+    // Pause to keep console open
+    cout << "\nPress Enter to exit...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
 
     return 0;
 }

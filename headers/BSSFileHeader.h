@@ -49,13 +49,22 @@ public:
     // Writes the header object directly to the start of the file
     bool write(std::fstream& file) const {
         file.seekp(0, std::ios::beg);
-        file.write(reinterpret_cast<const char*>(this), sizeof(BSSFileHeader));
+        // Only write up to blockSize to avoid overwriting block 1
+        size_t writeSize = (sizeof(BSSFileHeader) < blockSize) ? sizeof(BSSFileHeader) : blockSize;
+        file.write(reinterpret_cast<const char*>(this), writeSize);
+        
+        // If header is smaller than block, pad with zeros
+        if (writeSize < blockSize) {
+            std::vector<char> padding(blockSize - writeSize, 0);
+            file.write(padding.data(), padding.size());
+        }
         return file.good();
     }
 
     // Reads the header object directly from the start of the file
     bool read(std::fstream& file) {
         file.seekg(0, std::ios::beg);
+        // Only read the actual struct size, not the full block
         file.read(reinterpret_cast<char*>(this), sizeof(BSSFileHeader));
         return file.good();
     }
@@ -129,14 +138,11 @@ private:
     char fileStructureType[32]; // e.g., "BSS_COMMA_LEN_IND"
     uint32_t version;
     uint32_t headerRecordSize;  // Size of this struct
-    // (Could add 'bytes for record size' and 'size format type' if needed)
     uint32_t blockSize;         // Default 512
     uint32_t minBlockCapacity;  // Default 50%
-    // (Could add index file name and schema)
     
     uint32_t recordCount;       // Total records in the file
     uint32_t blockCount;        // Total blocks (active + avail)
-    // (Could add 'fields per record' and field schemas)
     
     int listHeadRBN;            // RBN of the first block in the active sequence
     int availHeadRBN;           // RBN of the first block in the avail list

@@ -15,23 +15,8 @@
     "C_Cpp.default.cppStandard": "c++17",
     "C_Cpp.default.configurationProvider": "ms-vscode.cpptools",
     "files.associations": {
-        "*.h": "cpp",
-        "*.cpp": "cpp",
-        "sstream": "cpp",
-        "cctype": "cpp",
-        "string": "cpp",
-        "vector": "cpp",
-        "algorithm": "cpp",
-        "fstream": "cpp",
-        "iostream": "cpp",
-        "iomanip": "cpp",
-        "cstring": "cpp",
-        "map": "cpp",
-        "limits": "cpp"
-    },
-    "emmet.includeLanguages": {
-        "cpp": "html"
-    },
-    "debug.allowBreakpointsEverywhere": true,
-    "terminal.integrated.defaultProfile.windows": "Command Prompt"
+        "iosfwd": "cpp",
+        "xstring": "cpp",
+        "iostream": "cpp"
+    }
 }

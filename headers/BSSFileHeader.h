@@ -19,14 +19,15 @@ public:
         : version(1), headerRecordSize(sizeof(BSSFileHeader)),
           blockSize(bSize), minBlockCapacity(50), recordCount(0),
           blockCount(0), listHeadRBN(-1), availHeadRBN(-1), stale(false),
+          // NEW fields:
           recordSizeFieldBytes(4),   // 4-byte length integer
           sizeFormatType('B'),       // 'B' = binary, 'A' = ASCII
           fieldCount(6),             // Zip, Place, State, County, Lat, Lon
-          primaryKeyFieldIndex(0)    // ZipCode is primary key
+          primaryKeyFieldIndex(0)    // ZipCode is primary key 
     {
         // Initialize file structure type string
-        std::memset(fileStructureType, 0, sizeof(fileStructureType));
-        std::strncpy(fileStructureType, "BSS_COMMA_LEN_IND", sizeof(fileStructureType) - 1);
+        memset(fileStructureType, 0, sizeof(fileStructureType));
+        strncpy(fileStructureType, "BSS_COMMA_LEN_IND", sizeof(fileStructureType) - 1);
         
         // Index file name (can be overridden with setter)
         std::memset(indexFileName, 0, sizeof(indexFileName));
@@ -80,9 +81,9 @@ public:
     void setListHeadRBN(int rbn) { listHeadRBN = rbn; }
     void setAvailHeadRBN(int rbn) { availHeadRBN = rbn; }
 
-    //--- header-architecture info ---
+//--- header-architecture info ---
 
-    // Number of bytes for the record size integer
+// Number of bytes for the record size integer
     uint32_t getRecordSizeFieldBytes() const { return recordSizeFieldBytes; }
     void setRecordSizeFieldBytes(uint32_t v) { recordSizeFieldBytes = v; }
 

@@ -19,7 +19,27 @@ void BSSBlock::clear() {
     header->recordCount = 0;
     header->successorRBN = -1;
     header->predecessorRBN = -1;
-    header->blockType = 'A';
+    header->blockType = 'A';  // Active block
+    currentSize = sizeof(BlockHeader);
+    highestKey = "";
+}
+
+/**
+ * @brief Converts this block to an avail list block.
+ * @param nextAvailRBN The RBN of the next block in the avail list (-1 if this is the last)
+ * @note Avail blocks have recordCount == 0 and are filled with blanks (spaces)
+ */
+void BSSBlock::makeAvailBlock(int nextAvailRBN) {
+    // Fill entire buffer with blanks (spaces) as per specification
+    memset(buffer, ' ', blockSize);
+    
+    // Set header for avail block
+    BlockHeader* header = getHeader();
+    header->recordCount = 0;              // Must be 0 for avail blocks
+    header->successorRBN = nextAvailRBN;  // Link to next avail block
+    header->predecessorRBN = -1;          // Not used in avail list
+    header->blockType = 'V';              // 'V' = aVail block
+    
     currentSize = sizeof(BlockHeader);
     highestKey = "";
 }
@@ -65,19 +85,36 @@ bool BSSBlock::addRecord(const ZipCodeRecordBuffer& record) {
  * @return True on success.
  */
 bool BSSBlock::read(std::fstream& file, int rbn, uint32_t bSize) {
+    std::cout << "[BSSBlock::read] Reading RBN " << rbn << ", blockSize=" << bSize << std::endl;
+    std::cout.flush();
+    
     if (blockSize != bSize) {
         delete[] buffer;
         blockSize = bSize;
         buffer = new char[blockSize];
     }
     
+    std::cout << "[BSSBlock::read] Seeking to position " << ((long long)rbn * blockSize) << std::endl;
+    std::cout.flush();
+    
     file.seekg((long long)rbn * blockSize, std::ios::beg);
+    
+    std::cout << "[BSSBlock::read] Reading " << blockSize << " bytes..." << std::endl;
+    std::cout.flush();
+    
     file.read(buffer, blockSize);
+    
+    std::cout << "[BSSBlock::read] Read complete. Parsing block..." << std::endl;
+    std::cout.flush();
     
     // After reading, parse the block to set internal state
     currentSize = sizeof(BlockHeader); // Start after header
     highestKey = "";
     BlockHeader* header = getHeader();
+    
+    std::cout << "[BSSBlock::read] Block header: recordCount=" << header->recordCount
+              << ", type=" << header->blockType << std::endl;
+    std::cout.flush();
 
     for (uint32_t i = 0; i < header->recordCount; ++i) {
         if (currentSize + sizeof(uint16_t) > blockSize) break; // Corrupt block

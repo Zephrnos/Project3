@@ -4,14 +4,12 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include <limits>
 #include <algorithm>
 #include <cctype>
 #include <vector>
-#include <iostream>
-#include <iomanip>
 
-// (Your existing const lengths)
 const int ZIP_CODE_LENGTH = 5;
 const int PLACE_NAME_LENGTH = 50;
 const int STATE_LENGTH = 2;
@@ -22,31 +20,50 @@ class ZipCodeRecordBuffer {
 public:
     ZipCodeRecordBuffer() {
         for (int i = 0; i < 6; ++i) m_fields[i] = "";
-        latitude = 0.0;
-        longitude = 0.0;
     }
 
-    /**
-     * @brief Unpacks a comma-separated string (a single record) into this object's fields.
-     * @param recordString The comma-separated string (e.g., "56301,St Cloud,MN,...").
-     * @return True on success, false on failure.
-     * @note This directly addresses Task 5: "The record buffer unpacks fields".
-     */
+    std::string pack() const {
+    std::ostringstream ss;
+    ss << m_fields[0] << ','    // Zip
+       << m_fields[1] << ','    // Place name
+       << m_fields[2] << ','    // State
+       << m_fields[3] << ','    // County
+       << latitude << ','       // Latitude
+       << longitude;            // Longitude
+    return ss.str();
+}
+
     bool unpack(const std::string& recordString) {
         std::istringstream ss(recordString);
+        std::vector<std::string> fields;
         std::string token;
         
         try {
-            std::getline(ss, m_fields[0], ','); // Zip
-            std::getline(ss, m_fields[1], ','); // Place
-            std::getline(ss, m_fields[2], ','); // State
-            std::getline(ss, m_fields[3], ','); // County
+            // Parse CSV with proper quote handling
+            while (std::getline(ss, token, ',')) {
+                trim(token);
+                // Remove surrounding quotes if present
+                if (token.size() >= 2 && token.front() == '"' && token.back() == '"') {
+                    token = token.substr(1, token.size() - 2);
+                    trim(token);
+                }
+                fields.push_back(token);
+            }
             
-            std::getline(ss, token, ','); // Lat
-            latitude = std::stod(token);
+            // Need at least 6 fields
+            if (fields.size() < 6) {
+                return false;
+            }
             
-            std::getline(ss, token, ','); // Lon
-            longitude = std::stod(token);
+            // Assign fields
+            m_fields[0] = truncateTo(fields[0], ZIP_CODE_LENGTH);      // Zip
+            m_fields[1] = truncateTo(fields[1], PLACE_NAME_LENGTH);    // Place
+            m_fields[2] = truncateTo(fields[2], STATE_LENGTH);         // State
+            m_fields[3] = truncateTo(fields[3], COUNTY_LENGTH);        // County
+            
+            // Parse numeric fields
+            latitude = std::stod(fields[4]);   // Lat
+            longitude = std::stod(fields[5]);  // Lon
             
             return true;
         } catch (const std::exception& e) {
@@ -55,37 +72,19 @@ public:
         }
     }
 
-    /**
-     * @brief Packs this object's fields into a single comma-separated string.
-     * @return The comma-separated string.
-     * @note This is the inverse of unpack().
-     */
-    std::string pack() const {
-        std::ostringstream ss;
-        ss << m_fields[0] << ','    // Zip
-           << m_fields[1] << ','    // Place name
-           << m_fields[2] << ','    // State
-           << m_fields[3] << ','    // County
-           << latitude << ','       // Latitude
-           << longitude;            // Longitude
-        return ss.str();
-    }
-
-    /**
-     * @brief Reads a record from a CSV file stream.
-     * @note This is your original ReadRecord, still useful for the initial file creation.
-     */
+    // Reads until a valid data record is found or EOF; returns true when a valid record is parsed
     bool ReadRecord(std::istream& file) {
         std::string line;
         while (std::getline(file, line)) {
             if (line.empty()) continue;
 
-            // (Your existing CSV parsing logic)
+            // parse CSV fields (simple split by comma) - handle up to 7 columns
             std::vector<std::string> fields;
             std::istringstream ss(line);
             std::string token;
             while (std::getline(ss, token, ',')) {
                 trim(token);
+                // remove surrounding quotes
                 if (token.size() >= 2 && token.front() == '"' && token.back() == '"') {
                     token = token.substr(1, token.size() - 2);
                     trim(token);
@@ -93,24 +92,30 @@ public:
                 fields.push_back(token);
             }
 
+            // If not 6 or 7 fields, skip line
             if (fields.size() < 6) continue;
-            if (fields.size() > 7) fields.resize(6);
-            
+            if (fields.size() > 7) {
+             // keep first 6 tokens (or merge extras into the last token)
+            fields.resize(6);
+            }
             bool hasRecordLength = false;
+            // Detect optional RecordLength field: treat as numeric integer (all digits)
             if (fields.size() == 7) {
-                 // (Your logic for detecting record length or header)
                 const std::string &f0 = fields[0];
                 bool allDigits = !f0.empty() && std::all_of(f0.begin(), f0.end(), [](unsigned char c){
                     return std::isdigit(c);
                 });
                 if (allDigits) hasRecordLength = true;
                 else {
+                    // maybe header with "RecordLength" text: skip header
                     std::string up0 = f0;
                     std::transform(up0.begin(), up0.end(), up0.begin(), [](unsigned char c){ return std::toupper(c); });
                     if (up0.find("RECORD") != std::string::npos) continue;
+                    // otherwise, accept as 7th field but treat as not record length (rare)
                 }
             }
 
+            // Determine indices for fields: if hasRecordLength, zip is fields[1], else fields[0]
             int zipId = hasRecordLength ? 1 : 0;
             int placeId = zipId + 1;
             int stateId = zipId + 2;
@@ -118,16 +123,15 @@ public:
             int latId = zipId + 4;
             int lonId = zipId + 5;
 
+            // Basic header detection: if zip field contains "ZIP" or "POSTAL", skip
             std::string zipCandidate = fields[zipId];
             std::string upZip = zipCandidate;
             std::transform(upZip.begin(), upZip.end(), upZip.begin(), [](unsigned char c){ return std::toupper(c); });
             if (upZip.find("ZIP") != std::string::npos || upZip.find("POSTAL") != std::string::npos) {
                 continue;
             }
-            if (zipCandidate.empty() || !std::all_of(zipCandidate.begin(), zipCandidate.end(), ::isdigit)) {
-                continue; // Skip if zip is not purely numeric
-            }
 
+            // Now map into m_fields (we always keep 6 logical fields)
             m_fields[0] = truncateTo(fields[zipId], ZIP_CODE_LENGTH);
             m_fields[1] = truncateTo(fields[placeId], PLACE_NAME_LENGTH);
             m_fields[2] = truncateTo(fields[stateId], STATE_LENGTH);
@@ -135,27 +139,23 @@ public:
             std::string latStr = truncateTo(fields[latId], LAT_LONG_LENGTH);
             std::string lonStr = truncateTo(fields[lonId], LAT_LONG_LENGTH);
 
+            // Try converting lat/lon
             try {
+                // std::stod tolerates leading/trailing spaces
                 latitude = std::stod(latStr);
                 longitude = std::stod(lonStr);
             } catch (...) {
+                // malformed numeric fields -> skip line
                 continue;
             }
+
+            // success
             return true;
         }
+        // EOF reached without a valid data record
         return false;
     }
 
-    void print() const {
-        std::cout << "---------------------------------------------\n"
-                  << "ZIP Code: " << m_fields[0] << "\n"
-                  << "Place Name: " << m_fields[1] << "\n"
-                  << "State: " << m_fields[2] << "\n"
-                  << "County: " << m_fields[3] << "\n"
-                  << "Latitude: " << latitude << "\n"
-                  << "Longitude: " << longitude << "\n";
-    }
-    
     std::string getZipCode() const { return m_fields[0]; }
     std::string getPlaceName() const { return m_fields[1]; }
     std::string getState() const { return m_fields[2]; }
@@ -163,10 +163,20 @@ public:
     double getLatitude() const { return latitude; }
     double getLongitude() const { return longitude; }
 
+    // Print method for displaying record information
+    void print() const {
+        std::cout << "ZIP: " << m_fields[0]
+                  << " | Place: " << m_fields[1]
+                  << " | State: " << m_fields[2]
+                  << " | County: " << m_fields[3]
+                  << " | Lat: " << latitude
+                  << " | Lon: " << longitude << std::endl;
+    }
+
 private:
     std::string m_fields[6];
-    double latitude;
-    double longitude;
+    double latitude = std::numeric_limits<double>::quiet_NaN();
+    double longitude = std::numeric_limits<double>::quiet_NaN();
 
     static inline void trim(std::string &s) {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {

@@ -32,6 +32,13 @@ public:
     void clear();
 
     /**
+     * @brief Converts this block to an avail list block.
+     * @param nextAvailRBN The RBN of the next block in the avail list (-1 if this is the last)
+     * @note Avail blocks have recordCount == 0 and are filled with blanks (spaces)
+     */
+    void makeAvailBlock(int nextAvailRBN);
+
+    /**
      * @brief Tries to add a record to this block.
      * @param record The record object to pack.
      * @return True if the record fit, false otherwise.

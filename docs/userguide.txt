@@ -11,8 +11,7 @@ Your folder should look like this:
 
     Project3/
     ├── src/
-    │   ├── main_p2.cpp
-    │   ├── main_p3.cpp
+    │   ├── main.cpp
     │   ├── BSSBlock.cpp
     │   ├── BSSFile.cpp
     │   ├── BSSIndex.cpp
@@ -32,12 +31,9 @@ Your folder should look like this:
     │   ├── us_postal_codes.csv
     │   ├── converted_postal_codes.csv
     │   ├── new_postal_codes.csv
-    │   ├── newBinaryPCodes.dat    (generated after main_p2 execution)
-    │   └── (any other data files)
-    │ 
-    ├── zip.bss  (generated after creating BSS)
-    └── zip.idx  (generated index)
-
+    │   └── newBinaryPCodes.dat
+    ├── zipCodes.bss
+    └── zipCodes.bss.idx
 
 If your layout does not match this, create the folders manually:
     
@@ -50,100 +46,61 @@ the proper folder.
 2. Building and Running the program
 ------------------------------------
 
-First, make sure you current directory is at the project root.
+First, make sure your current directory is at the project root.
 
-To build main_p2 on unix machines:
+To build on unix machines:
 
-    g++ -std=c++17 src/main_p2.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p2
+    g++ -std=c++17 src/*.cpp -I headers -o Project3
 
-To build main_p2 on windows machines:
+To build on windows machines:
 
-    g++ -std=c++17 src\main_p2.cpp src\BSSBlock.cpp src\BSSFile.cpp src\BSSIndex.cpp src\convertCSV.cpp src\IndexManager.cpp src\readBinaryFile.cpp -I headers -o p2.exe
+    g++ -std=c++17 src\*.cpp -I headers -o Project3.exe
 
-Next, you need to exectute main_p2:
+To run the program:
 
-    ./p2 or .\p2 on windows
+    ./Project3        (unix)
+    Project3.exe      (windows)
 
-After running this you will have a new file in the data folder called:
+When running without arguments, the program will perform a demo that includes 
+creating the BSS file if missing, performing predefined searches, dumping the 
+BSS file, finding extreme zip codes, and starting interactive mode.
 
-    data/newBinaryPCodes.dat
+Usage examples:
 
-Once you run main_p2 you can than build main_p3. To build on unix machines:
+    ./Project3 -i
+        Start interactive zip code lookup mode
 
-    g++ -std=c++17 src/main_p3.cpp src/BSSBlock.cpp src/BSSFile.cpp src/BSSIndex.cpp src/convertCSV.cpp src/IndexManager.cpp src/readBinaryFile.cpp -I headers -o p3
+    ./Project3 --test
+        Run search test demonstration with valid and invalid zip codes
 
-To build main_p3 on windows machines:
+    ./Project3 <bss_file> -Z<zip1> [-Z<zip2> ...]
+        Search for specific zip codes
 
-    g++ -std=c++17 src\main_p3.cpp src\BSSBlock.cpp src\BSSFile.cpp src\BSSIndex.cpp src\convertCSV.cpp src\IndexManager.cpp src\readBinaryFile.cpp -I headers -o p3.exe
+    ./Project3
+        Run in demo mode with predefined searches and interactive mode
 
-You can now run main_p3 with the command:
+Arguments:
 
-    ./p3 or .\p3 on windows
+    -i, --interactive  Start interactive mode
+    --test             Run search test demonstration
+    <bss_file>         Path to the blocked sequence set file
+    -Z<zipcode>        Zip code to search for (e.g., -Z10001)
 
-When running main_p3, this will perform the BSS creation, searching
-dumping, and the index operations.
+Examples:
 
-    --------------------------------------------
-    A. Create a Blocked Sequence Set and Index
-    --------------------------------------------
+    ./Project3 -i
+    ./Project3 --test
+    ./Project3 data/zipCodes.bss -Z10001
+    ./Project3 data/zipCodes.bss -Z10001 -Z90210 -Z60601
 
-    Usage:
-
-        ./p3 --create <proj2_dat_file> <bss_file> <index_file>
-
-    Example:
-
-        ./p3 --create data/newBinaryPCodes.dat zip.bss zip.idx
-
-    Outputs:
-
-        zip.bss  → Blocked Sequence Set file  
-        zip.idx  → Simple index file  
-
-    -------------------------
-    B. Search for Zip Codes
-    -------------------------
-
-    Usage:
-
-        ./p3 --search <bss_file> <index_file> -Z<zip1> [-Z<zip2> ...]
-
-    Example:
-
-        ./p3 --search zip.bss zip.idx -Z55316 -Z90210 -Z00000
-
-    ---------------------------------
-    C. Dump Blocks in Logical Order
-    ---------------------------------
-
-    Usage:
-
-        ./p3 --dump-logical <bss_file>
-
-    ----------------------------------
-    D. Dump Blocks in Physical Order
-    ----------------------------------
-
-    Usage:
-
-        ./p3 --dump-physical <bss_file>
-
-    -------------------
-    E. Dump the Index
-    -------------------
-
-    Usage:
-
-        ./p3 --dump-index <index_file>
-
----------------------------
+------------------------------------
 3. Resetting Output Files
----------------------------
+------------------------------------
 
 To start fresh:
 
-    rm -f zip.bss zip.idx
+    rm -f zipCodes.bss zipCodes.bss.idx
 
-Then regenerate:
+Then regenerate by running the program with demo or interactive mode:
 
-    ./p3 --create data/newBinaryPCodes.dat zip.bss zip.idx
+    ./Project3

@@ -46,6 +46,8 @@ bool BSSFile::create(const std::string& bssFilename, const std::string& proj2Dat
     
     uint32_t p2RecordCount = p2Header.getRecordCount();
     ZipCodeRecordBuffer tempRec;
+    uint32_t successfulRecords = 0;
+    uint32_t skippedRecords = 0;
 
     for (uint32_t i = 0; i < p2RecordCount; ++i) {
         uint32_t recordLength;
@@ -63,10 +65,20 @@ bool BSSFile::create(const std::string& bssFilename, const std::string& proj2Dat
         // Use the unpack method to parse the string
         if (tempRec.unpack(recordString)) {
             records.push_back(tempRec);
+            successfulRecords++;
         } else {
-             std::cerr << "Error unpacking record " << i << std::endl;
+            skippedRecords++;
+            if (skippedRecords <= 3) {  // Show first few errors for debugging
+                std::cerr << "Skipping invalid record " << i << " (likely header fragment)\n";
+                if (recordString.length() < 100) {
+                    std::cerr << "  Content: '" << recordString << "'\n";
+                }
+            }
         }
     }
+    
+    std::cout << "Loaded " << successfulRecords << " valid records (skipped "
+              << skippedRecords << " invalid records)\n";
     datFile.close();
 
     // Sort records by Zip Code (primary key)
@@ -120,6 +132,9 @@ bool BSSFile::create(const std::string& bssFilename, const std::string& proj2Dat
     header.setBlockCount(currentRBN + 1);
 
     // 5. Write updated header
+    std::cout << "Writing header: blockCount=" << header.getBlockCount()
+              << ", recordCount=" << header.getRecordCount()
+              << ", listHeadRBN=" << header.getListHeadRBN() << "\n";
     header.write(file);
     file.close();
     return true;
@@ -127,11 +142,22 @@ bool BSSFile::create(const std::string& bssFilename, const std::string& proj2Dat
 
 // Opens an existing .bss file
 bool BSSFile::open(const std::string& bssFilename) {
+    std::cout << "[BSSFile::open] Opening file: " << bssFilename << "\n";
     file.open(bssFilename, std::ios::in | std::ios::out | std::ios::binary);
-    if (!file) return false;
+    if (!file) {
+        std::cerr << "[BSSFile::open] Failed to open file\n";
+        return false;
+    }
     
-    if (!header.read(file)) return false;
+    std::cout << "[BSSFile::open] Reading header...\n";
+    if (!header.read(file)) {
+        std::cerr << "[BSSFile::open] Failed to read header\n";
+        return false;
+    }
+    
     blockSize = header.getBlockSize();
+    std::cout << "[BSSFile::open] Header read successfully. blockSize=" << blockSize
+              << ", listHeadRBN=" << header.getListHeadRBN() << "\n";
     return true;
 }
 
